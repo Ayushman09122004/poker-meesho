@@ -17,6 +17,8 @@ import { evaluateHand, compareHands } from '../../../shared/HandEvaluator';
 import { EnginePlayer, InternalPot, StreetActionRecord, emptyStats } from './types';
 
 const HAND_HISTORY_LIMIT = 25;
+const TIME_BANK_TOTAL_MS = 60_000;
+const TIME_BANK_INCREMENT_MS = 20_000;
 
 export class PokerEngine {
   players: Map<string, EnginePlayer> = new Map();
@@ -93,7 +95,7 @@ export class PokerEngine {
       isReady: false,
       lastAction: null,
       hasActedThisRound: false,
-      timeBankMs: 0,
+      timeBankMs: TIME_BANK_TOTAL_MS,
       stats: emptyStats(),
       isInHand: false,
     };

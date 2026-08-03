@@ -1,8 +1,8 @@
 import { Server } from 'socket.io';
-import { nanoid } from 'nanoid';
 import { ChatMessage, RoomSettings } from '../../../shared/types';
 import { ServerEvents } from '../../../shared/events';
 import { PokerEngine } from './PokerEngine';
+import { generateId } from '../utils/rng';
 
 const NEXT_HAND_DELAY_MS = 4500;
 const CHAT_HISTORY_LIMIT = 100;
@@ -37,7 +37,7 @@ export class Room {
   createTokenFor(playerId: string): string {
     const existing = this.tokenByPlayer.get(playerId);
     if (existing) return existing;
-    const token = nanoid(24);
+    const token = generateId(24);
     this.reconnectTokens.set(token, playerId);
     this.tokenByPlayer.set(playerId, token);
     return token;
@@ -116,7 +116,7 @@ export class Room {
   }
 
   systemChat(text: string): void {
-    this.broadcastChat({ id: nanoid(10), playerId: null, name: 'Table', text, ts: Date.now(), isSystem: true });
+    this.broadcastChat({ id: generateId(10), playerId: null, name: 'Table', text, ts: Date.now(), isSystem: true });
   }
 
   // ---------- Turn timer ----------

@@ -41,3 +41,18 @@ export function generateRoomCode(): string {
   }
   return code;
 }
+
+const ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+/**
+ * Generates a random URL-safe ID of the given length using a CSPRNG.
+ * A small in-house replacement for nanoid — nanoid v5+ ships ESM-only, which
+ * breaks `require()` from this project's CommonJS build output.
+ */
+export function generateId(length = 12): string {
+  let id = '';
+  for (let i = 0; i < length; i++) {
+    id += ID_ALPHABET[secureRandomInt(ID_ALPHABET.length)];
+  }
+  return id;
+}

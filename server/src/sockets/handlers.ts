@@ -1,5 +1,4 @@
 import { Server, Socket } from 'socket.io';
-import { nanoid } from 'nanoid';
 import {
   ActionPayload,
   ChatPayload,
@@ -12,6 +11,7 @@ import {
 import { ClientEvents, ServerEvents } from '../../../shared/events';
 import { RoomManager } from '../game/RoomManager';
 import { sanitizeSettings } from '../game/settings';
+import { generateId } from '../utils/rng';
 
 interface SocketData {
   roomCode?: string;
@@ -25,7 +25,7 @@ function cleanName(name: unknown): string {
 
 function cleanAvatarSeed(seed: unknown): string {
   const s = String(seed ?? '').trim().slice(0, 40);
-  return s.length > 0 ? s : nanoid(6);
+  return s.length > 0 ? s : generateId(6);
 }
 
 function cleanChatText(text: unknown): string | null {
@@ -49,7 +49,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
 
     socket.on(ClientEvents.CreateRoom, (payload: CreateRoomPayload, ack?: (r: JoinRoomResult) => void) => {
       const room = rooms.createRoom(payload.settings ?? {});
-      const playerId = nanoid(10);
+      const playerId = generateId(10);
       const add = room.engine.addPlayer(playerId, cleanName(payload.name), cleanAvatarSeed(payload.avatarSeed), true);
       if (!add.ok) {
         ack?.({ ok: false, error: add.error });
@@ -96,7 +96,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       }
 
       const name = cleanName(payload.name);
-      const playerId = nanoid(10);
+      const playerId = generateId(10);
       const add = room.engine.addPlayer(playerId, name, cleanAvatarSeed(payload.avatarSeed), room.engine.players.size === 0);
       if (!add.ok) {
         ack?.({ ok: false, error: add.error });
@@ -242,7 +242,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       if (!text) return;
       const player = room.engine.players.get(data.playerId);
       if (!player) return;
-      room.broadcastChat({ id: nanoid(10), playerId: player.id, name: player.name, text, ts: Date.now() });
+      room.broadcastChat({ id: generateId(10), playerId: player.id, name: player.name, text, ts: Date.now() });
     });
 
     socket.on(ClientEvents.SendEmote, (payload: EmotePayload) => {
