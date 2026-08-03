@@ -137,6 +137,10 @@ export function sendPlayerAction(action: PlayerAction, amount?: number): void {
   socket.emit(ClientEvents.PlayerAction, payload);
 }
 
+export function useTimeBankAction(): void {
+  socket.emit(ClientEvents.UseTimeBank);
+}
+
 export function sendChat(text: string): void {
   socket.emit(ClientEvents.SendChat, { text });
 }

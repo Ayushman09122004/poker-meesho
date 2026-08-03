@@ -296,3 +296,56 @@ describe('PokerEngine - reveals the "would have come" board after an early fold'
     expect(engine.revealedRunoutFrom).toBe(null);
   });
 });
+
+describe('PokerEngine - time bank', () => {
+  it('extends the current turn and decrements the bank when used on your own turn', () => {
+    const engine = new PokerEngine('ABCDE', makeSettings({ maxPlayers: 2, turnTimerSeconds: 30 }));
+    engine.addPlayer('p1', 'Alice', 'a', true);
+    engine.addPlayer('p2', 'Bob', 'b', false);
+    engine.startHand();
+
+    const turn = engine.currentTurnPlayerId!;
+    const player = engine.players.get(turn)!;
+    const bankBefore = player.timeBankMs;
+    const expiresBefore = engine.turnExpiresAt!;
+
+    const r = engine.useTimeBank(turn);
+    expect(r.ok).toBe(true);
+    expect(player.timeBankMs).toBe(bankBefore - 20_000);
+    expect(engine.turnExpiresAt).toBe(expiresBefore + 20_000);
+  });
+
+  it('rejects using the time bank when it is not your turn', () => {
+    const engine = new PokerEngine('ABCDE', makeSettings({ maxPlayers: 2 }));
+    engine.addPlayer('p1', 'Alice', 'a', true);
+    engine.addPlayer('p2', 'Bob', 'b', false);
+    engine.startHand();
+
+    const notTurn = [...engine.players.keys()].find((id) => id !== engine.currentTurnPlayerId)!;
+    const r = engine.useTimeBank(notTurn);
+    expect(r.ok).toBe(false);
+  });
+
+  it('rejects using the time bank once it is exhausted', () => {
+    const engine = new PokerEngine('ABCDE', makeSettings({ maxPlayers: 2 }));
+    engine.addPlayer('p1', 'Alice', 'a', true);
+    engine.addPlayer('p2', 'Bob', 'b', false);
+    engine.startHand();
+
+    const turn = engine.currentTurnPlayerId!;
+    engine.players.get(turn)!.timeBankMs = 0;
+    const r = engine.useTimeBank(turn);
+    expect(r.ok).toBe(false);
+  });
+
+  it('resets everyone\'s time bank on a full game restart', () => {
+    const engine = new PokerEngine('ABCDE', makeSettings({ maxPlayers: 2 }));
+    engine.addPlayer('p1', 'Alice', 'a', true);
+    engine.addPlayer('p2', 'Bob', 'b', false);
+    engine.startHand();
+    engine.useTimeBank(engine.currentTurnPlayerId!);
+
+    engine.resetGame();
+    for (const p of engine.players.values()) expect(p.timeBankMs).toBe(60_000);
+  });
+});

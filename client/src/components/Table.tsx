@@ -10,7 +10,8 @@ import { StatsPanel } from './StatsPanel';
 import { HandHistoryPanel } from './HandHistoryPanel';
 import { HostControlsModal } from './HostControlsModal';
 import { HandHintBadge } from './HandHintBadge';
-import { getSeatPosition, relativeSeatIndex } from '../lib/seatLayout';
+import { DealerButton } from './DealerButton';
+import { getSeatPosition, getDealerButtonPosition, relativeSeatIndex } from '../lib/seatLayout';
 import { leaveRoom, requestRebuy } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
 import { computeHandHint } from '../lib/handHint';
@@ -53,6 +54,14 @@ export function Table() {
       map.set(p.id, getSeatPosition(rel, snapshot.settings.maxPlayers));
     }
     return map;
+  }, [snapshot, selfPlayerId]);
+
+  const dealerButtonPosition = useMemo(() => {
+    if (!snapshot) return null;
+    const selfPlayer = snapshot.players.find((p) => p.id === selfPlayerId);
+    const selfSeat = selfPlayer?.seatIndex ?? 0;
+    const rel = relativeSeatIndex(snapshot.dealerSeat, selfSeat, snapshot.settings.maxPlayers);
+    return getDealerButtonPosition(rel, snapshot.settings.maxPlayers);
   }, [snapshot, selfPlayerId]);
 
   if (!snapshot) return null;
@@ -132,7 +141,6 @@ export function Table() {
                 isTurn={snapshot.currentTurnPlayerId === p.id}
                 turnExpiresAt={snapshot.currentTurnPlayerId === p.id ? snapshot.turnExpiresAt : null}
                 turnTotalMs={snapshot.settings.turnTimerSeconds * 1000}
-                isDealer={snapshot.dealerSeat === p.seatIndex}
                 isSB={snapshot.smallBlindSeat === p.seatIndex}
                 isBB={snapshot.bigBlindSeat === p.seatIndex}
                 winner={winnersByPlayer.get(p.id)}
@@ -141,6 +149,8 @@ export function Table() {
               />
             );
           })}
+
+          {dealerButtonPosition && snapshot.phase !== 'lobby' && <DealerButton position={dealerButtonPosition} />}
 
           <EmoteOverlay emotes={emotes} positionFor={(pid) => positions.get(pid) ?? null} />
         </div>
@@ -153,7 +163,7 @@ export function Table() {
       >
         {snapshot.phase === 'hand_in_progress' && <HandHintBadge hint={hint} />}
         {isMyTurn && snapshot.legalActionsForViewer && self && (
-          <ActionBar snapshot={snapshot} legal={snapshot.legalActionsForViewer} selfChips={self.chips} />
+          <ActionBar snapshot={snapshot} legal={snapshot.legalActionsForViewer} selfChips={self.chips} timeBankMs={self.timeBankMs} />
         )}
         {self?.status === 'eliminated' && (
           <div className="pointer-events-auto bg-ink-900/90 border border-white/10 rounded-xl px-4 py-3 flex items-center gap-3">
@@ -179,7 +189,7 @@ export function Table() {
         <ChatDock />
       </div>
 
-      {showStats && <StatsPanel snapshot={snapshot} onClose={() => toggleStats(false)} />}
+      {showStats && <StatsPanel snapshot={snapshot} selfPlayerId={selfPlayerId} onClose={() => toggleStats(false)} />}
       {showHandHistory && <HandHistoryPanel snapshot={snapshot} onClose={() => toggleHandHistory(false)} />}
       {showHostSettings && isHost && <HostControlsModal snapshot={snapshot} onClose={() => toggleHostSettings(false)} />}
 

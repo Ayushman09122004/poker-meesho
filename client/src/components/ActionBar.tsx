@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { GameStateSnapshot, LegalActions } from '../../../shared/types';
-import { sendPlayerAction } from '../hooks/useGameConnection';
+import { sendPlayerAction, useTimeBankAction } from '../hooks/useGameConnection';
 import { formatChips } from './Chips';
 import { sound } from '../lib/sound';
 
@@ -9,9 +9,10 @@ interface ActionBarProps {
   snapshot: GameStateSnapshot;
   legal: LegalActions;
   selfChips: number;
+  timeBankMs: number;
 }
 
-export function ActionBar({ snapshot, legal, selfChips }: ActionBarProps) {
+export function ActionBar({ snapshot, legal, selfChips, timeBankMs }: ActionBarProps) {
   const [raiseAmount, setRaiseAmount] = useState(legal.minRaiseTo);
 
   useEffect(() => {
@@ -35,8 +36,20 @@ export function ActionBar({ snapshot, legal, selfChips }: ActionBarProps) {
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      className="pointer-events-auto w-full max-w-2xl mx-auto bg-ink-900/95 backdrop-blur border border-gold/30 rounded-2xl shadow-glow p-3 sm:p-4"
+      className="pointer-events-auto relative w-full max-w-2xl mx-auto bg-ink-900/95 backdrop-blur border border-gold/30 rounded-2xl shadow-glow p-3 sm:p-4"
     >
+      {timeBankMs > 0 && (
+        <button
+          onClick={() => {
+            sound.uiClick();
+            useTimeBankAction();
+          }}
+          title="Add 20 seconds from your time bank"
+          className="absolute -top-3 right-3 sm:right-4 px-2.5 py-1 rounded-full bg-ink-800 border border-gold/40 text-[11px] text-gold-light font-display hover:bg-ink-700 transition shadow-card"
+        >
+          ⏱ +20s ({Math.ceil(timeBankMs / 1000)}s left)
+        </button>
+      )}
       {showRaiseControls && (
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">

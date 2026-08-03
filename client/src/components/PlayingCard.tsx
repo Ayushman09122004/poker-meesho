@@ -24,14 +24,23 @@ interface PlayingCardProps {
   dimmed?: boolean;
 }
 
+// Mobile-first: the base (unprefixed) size is what phones get; sm:/md: bump it up on wider
+// screens. This keeps a 5-card community row from ever overflowing a narrow phone viewport.
 const SIZES = {
-  sm: 'w-11 h-16 text-sm rounded-md',
-  md: 'w-16 h-[92px] text-xl rounded-lg',
-  lg: 'w-24 h-[136px] text-3xl rounded-xl',
+  sm: 'w-8 h-11 sm:w-11 sm:h-16 text-[10px] sm:text-sm rounded-md',
+  md: 'w-11 h-16 sm:w-16 sm:h-[92px] text-sm sm:text-xl rounded-lg',
+  lg: 'w-10 h-14 sm:w-16 sm:h-[92px] md:w-24 md:h-[136px] text-xs sm:text-xl md:text-3xl rounded-lg md:rounded-xl',
+};
+
+const CORNER_SIZES = {
+  sm: 'text-[8px]',
+  md: 'text-[9px] sm:text-xs',
+  lg: 'text-[8px] sm:text-xs md:text-sm',
 };
 
 export function PlayingCard({ card, faceDown, size = 'md', delay = 0, highlighted, dimmed }: PlayingCardProps) {
   const dims = SIZES[size];
+  const cornerSize = CORNER_SIZES[size];
   const isFaceDown = faceDown || !card;
 
   return (
@@ -49,14 +58,21 @@ export function PlayingCard({ card, faceDown, size = 'md', delay = 0, highlighte
       >
         {/* Face */}
         <div
-          className={`card-face absolute inset-0 flex flex-col items-center justify-center border ${dims} bg-white shadow-card ${
+          className={`card-face absolute inset-0 flex items-center justify-center border ${dims} bg-white shadow-card ${
             highlighted ? 'ring-[3px] ring-gold shadow-glow scale-105' : 'border-slate-300'
           }`}
         >
           {card && (
             <>
-              <span className={`font-bold leading-none ${SUIT_COLOR[card.suit]}`}>{card.rank}</span>
+              <div className={`absolute top-0.5 left-1 sm:top-1 sm:left-1.5 flex flex-col items-center leading-none ${cornerSize} font-bold ${SUIT_COLOR[card.suit]}`}>
+                <span>{card.rank}</span>
+                <span>{SUIT_SYMBOL[card.suit]}</span>
+              </div>
               <span className={`leading-none ${SUIT_COLOR[card.suit]}`}>{SUIT_SYMBOL[card.suit]}</span>
+              <div className={`absolute bottom-0.5 right-1 sm:bottom-1 sm:right-1.5 flex flex-col items-center leading-none rotate-180 ${cornerSize} font-bold ${SUIT_COLOR[card.suit]}`}>
+                <span>{card.rank}</span>
+                <span>{SUIT_SYMBOL[card.suit]}</span>
+              </div>
             </>
           )}
         </div>

@@ -177,7 +177,21 @@ export class PokerEngine {
       p.lastAction = null;
       p.isInHand = false;
       p.stats = emptyStats();
+      p.timeBankMs = TIME_BANK_TOTAL_MS;
     }
+  }
+
+  /** Spends up to one time-bank increment to extend the caller's own current turn. */
+  useTimeBank(playerId: string): { ok: boolean; error?: string } {
+    const player = this.players.get(playerId);
+    if (!player) return { ok: false, error: 'Player not found' };
+    if (this.currentTurnPlayerId !== playerId) return { ok: false, error: 'Not your turn' };
+    if (player.timeBankMs <= 0) return { ok: false, error: 'No time bank left' };
+
+    const extension = Math.min(TIME_BANK_INCREMENT_MS, player.timeBankMs);
+    player.timeBankMs -= extension;
+    this.turnExpiresAt = (this.turnExpiresAt ?? Date.now()) + extension;
+    return { ok: true };
   }
 
   // ---------- Hand lifecycle ----------

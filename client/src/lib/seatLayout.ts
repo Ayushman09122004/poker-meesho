@@ -11,7 +11,7 @@ export function getSeatPosition(relIndex: number, maxPlayers: number): Point {
   const angleDeg = 90 + (relIndex * 360) / maxPlayers;
   const rad = (angleDeg * Math.PI) / 180;
   const rx = 43;
-  const ry = 35;
+  const ry = 30;
   return {
     left: 50 + rx * Math.cos(rad),
     top: 50 + ry * Math.sin(rad),
@@ -24,6 +24,15 @@ export function getBetPosition(relIndex: number, maxPlayers: number): Point {
   return {
     left: 50 + (seat.left - 50) * 0.55,
     top: 50 + (seat.top - 50) * 0.55,
+  };
+}
+
+/** A point just off the seat, pulled slightly toward center — where the dealer button sits. */
+export function getDealerButtonPosition(relIndex: number, maxPlayers: number): Point {
+  const seat = getSeatPosition(relIndex, maxPlayers);
+  return {
+    left: 50 + (seat.left - 50) * 0.78,
+    top: 50 + (seat.top - 50) * 0.78,
   };
 }
 

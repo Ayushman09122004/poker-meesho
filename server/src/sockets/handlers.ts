@@ -223,6 +223,17 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       room.afterEngineMutation();
     });
 
+    socket.on(ClientEvents.UseTimeBank, () => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      const result = room.engine.useTimeBank(data.playerId);
+      if (!result.ok) {
+        socket.emit(ServerEvents.RoomError, { message: result.error ?? 'Cannot use time bank' });
+        return;
+      }
+      room.afterEngineMutation();
+    });
+
     socket.on(ClientEvents.PlayerAction, (payload: ActionPayload) => {
       const room = currentRoom();
       if (!room || !data.playerId) return;

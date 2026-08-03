@@ -41,28 +41,32 @@ export function WinnerBanner({ snapshot }: WinnerBannerProps) {
   const entries = [...byPlayer.entries()];
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.85, y: -20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 pointer-events-none"
-      >
-        <div className="bg-gradient-to-r from-gold-dark via-gold to-gold-dark text-ink-950 rounded-2xl shadow-glow px-5 py-3 flex items-center gap-3">
-          {entries.map(([id, w]) => {
-            const player = snapshot.players.find((p) => p.id === id);
-            return (
-              <div key={id} className="flex items-center gap-2">
-                {player && <AvatarBadge seed={player.avatarSeed} size={28} />}
-                <div className="text-left">
-                  <p className="font-display font-bold text-sm leading-tight">{w.name} wins {formatChips(w.amount)}</p>
-                  {w.handName && <p className="text-[11px] leading-tight opacity-80">{w.handName}</p>}
+    // Outer plain div holds the static horizontal-centering transform — a motion.div's own
+    // animate transform would silently override a class-based translate set on the same element.
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85, y: -20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="flex flex-col items-center gap-2"
+        >
+          <div className="bg-gradient-to-r from-gold-dark via-gold to-gold-dark text-ink-950 rounded-2xl shadow-glow px-5 py-3 flex items-center gap-3">
+            {entries.map(([id, w]) => {
+              const player = snapshot.players.find((p) => p.id === id);
+              return (
+                <div key={id} className="flex items-center gap-2">
+                  {player && <AvatarBadge seed={player.avatarSeed} size={28} />}
+                  <div className="text-left">
+                    <p className="font-display font-bold text-sm leading-tight">{w.name} wins {formatChips(w.amount)}</p>
+                    {w.handName && <p className="text-[11px] leading-tight opacity-80">{w.handName}</p>}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </motion.div>
-    </AnimatePresence>
+              );
+            })}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }

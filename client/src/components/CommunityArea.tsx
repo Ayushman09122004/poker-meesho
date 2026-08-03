@@ -24,7 +24,7 @@ export function CommunityArea({ snapshot, highlightedKeys }: CommunityAreaProps)
         )}
       </AnimatePresence>
 
-      <div className="flex gap-2.5">
+      <div className="flex gap-1 sm:gap-2 md:gap-2.5">
         {slots.map((_, i) =>
           cards[i] ? (
             <PlayingCard

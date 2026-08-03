@@ -11,6 +11,7 @@ export const ClientEvents = {
   KickPlayer: 'host:kickPlayer',
   Rebuy: 'player:rebuy',
   PlayerAction: 'game:action',
+  UseTimeBank: 'player:useTimeBank',
   SendChat: 'chat:send',
   SendEmote: 'chat:emote',
 } as const;
