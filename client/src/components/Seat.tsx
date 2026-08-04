@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PublicPlayer, WinnerAnnouncement } from '../../../shared/types';
 import { AvatarBadge } from './AvatarBadge';
@@ -20,6 +21,7 @@ interface SeatProps {
   winner?: WinnerAnnouncement;
   showdownRevealed: boolean;
   highlightedKeys?: Set<string>;
+  seatScale: number;
 }
 
 const ACTION_LABEL: Record<string, string> = {
@@ -46,11 +48,24 @@ export function Seat({
   winner,
   showdownRevealed,
   highlightedKeys,
+  seatScale,
 }: SeatProps) {
   const folded = player.status === 'folded';
   const eliminated = player.status === 'eliminated';
   const isAllIn = player.status === 'all_in';
   const isMobile = useIsMobile();
+
+  // Replays a quick "playing a card" gesture on the avatar every time this player's action
+  // changes (check/call/bet/raise/fold/all-in) — a lightweight stand-in for a full card-toss
+  // animation that reads clearly at avatar size without needing new art assets.
+  const prevActionRef = useRef<string | null>(null);
+  const [gesturePulse, setGesturePulse] = useState(0);
+  useEffect(() => {
+    if (player.lastAction && player.lastAction !== prevActionRef.current) {
+      setGesturePulse((n) => n + 1);
+    }
+    prevActionRef.current = player.lastAction;
+  }, [player.lastAction]);
   const AVATAR_SIZE = isMobile ? AVATAR_SIZE_MOBILE : AVATAR_SIZE_DESKTOP;
   const betChipTop = Math.round(AVATAR_SIZE * 1.55);
   const winnerCalloutY = -Math.round(AVATAR_SIZE * 1.55);
@@ -75,7 +90,7 @@ export function Seat({
       <motion.div
         layout
         className="flex flex-col items-center gap-1.5"
-        animate={{ opacity: eliminated ? 0.35 : folded && !isSelf ? 0.55 : 1, scale: folded ? 0.94 : 1 }}
+        animate={{ opacity: eliminated ? 0.35 : folded && !isSelf ? 0.55 : 1, scale: (folded ? 0.94 : 1) * seatScale }}
         transition={{ duration: 0.35 }}
       >
       {/* Hole cards */}
@@ -114,7 +129,13 @@ export function Seat({
             winner ? 'ring-4 ring-gold shadow-glow' : ''
           }`}
         >
-          <AvatarBadge seed={player.avatarSeed} size={AVATAR_SIZE - 12} dimmed={!player.isConnected || eliminated} />
+          <AvatarBadge
+            seed={player.avatarSeed}
+            size={AVATAR_SIZE - 12}
+            dimmed={!player.isConnected || eliminated}
+            animated={!eliminated && !folded && player.isConnected}
+            gesturePulse={gesturePulse}
+          />
         </div>
         {(isSB || isBB) && (
           <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gold text-ink-950 text-xs font-black flex items-center justify-center border-2 border-ink-900">
@@ -123,11 +144,12 @@ export function Seat({
         )}
       </div>
 
-      {/* Name + chips */}
-      <div className={`text-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-black/50 backdrop-blur-sm min-w-[80px] sm:min-w-[104px] ${isTurn ? 'border border-gold/60' : 'border border-white/5'}`}>
-        <p className="text-xs sm:text-sm font-medium truncate max-w-[110px] sm:max-w-[130px] flex items-center gap-1 justify-center">
+      {/* Name + chips — no truncation: long names wrap onto a second line instead of being cut
+          off, since a hidden/clipped name was a reported bug and this is a low-traffic label. */}
+      <div className={`text-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-black/50 backdrop-blur-sm min-w-[84px] sm:min-w-[108px] max-w-[150px] sm:max-w-[180px] ${isTurn ? 'border border-gold/60' : 'border border-white/5'}`}>
+        <p className="text-xs sm:text-sm font-medium leading-tight break-words flex items-center gap-1 justify-center flex-wrap">
           {player.isHost && <span>👑</span>}
-          {player.name}
+          <span>{player.name}</span>
           {isSelf && <span className="text-gold-light">(you)</span>}
         </p>
         <p className="text-xs text-gold-light font-display">{formatChips(player.chips)}</p>

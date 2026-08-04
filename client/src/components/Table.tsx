@@ -11,7 +11,7 @@ import { HandHistoryPanel } from './HandHistoryPanel';
 import { HostControlsModal } from './HostControlsModal';
 import { HandHintBadge } from './HandHintBadge';
 import { DealerButton } from './DealerButton';
-import { getSeatPosition, getDealerButtonPosition, relativeSeatIndex } from '../lib/seatLayout';
+import { getSeatPosition, getDealerButtonPosition, occupiedSeatOrder, seatScaleForPlayerCount } from '../lib/seatLayout';
 import { leaveRoom, requestRebuy } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
 import { computeHandHint } from '../lib/handHint';
@@ -44,25 +44,39 @@ export function Table() {
 
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
+  // Seats spread evenly across the full oval based on how many players are actually seated, not
+  // the room's configured max capacity — a 9-seat room with 4 people shouldn't bunch them into a
+  // 160° arc just because 5 seats happen to be empty.
+  const seatOrder = useMemo(() => {
+    if (!snapshot) return { order: new Map<number, number>(), count: 0 };
+    const order = occupiedSeatOrder(snapshot.players.map((p) => p.seatIndex));
+    return { order, count: snapshot.players.length };
+  }, [snapshot]);
+
   const positions = useMemo(() => {
     if (!snapshot) return new Map<string, { left: number; top: number }>();
+    const { order, count } = seatOrder;
     const selfPlayer = snapshot.players.find((p) => p.id === selfPlayerId);
-    const selfSeat = selfPlayer?.seatIndex ?? 0;
+    const selfOrder = selfPlayer ? order.get(selfPlayer.seatIndex) ?? 0 : 0;
     const map = new Map<string, { left: number; top: number }>();
     for (const p of snapshot.players) {
-      const rel = relativeSeatIndex(p.seatIndex, selfSeat, snapshot.settings.maxPlayers);
-      map.set(p.id, getSeatPosition(rel, snapshot.settings.maxPlayers));
+      const playerOrder = order.get(p.seatIndex) ?? 0;
+      const rel = ((playerOrder - selfOrder) % count + count) % count;
+      map.set(p.id, getSeatPosition(rel, count));
     }
     return map;
-  }, [snapshot, selfPlayerId]);
+  }, [snapshot, selfPlayerId, seatOrder]);
 
   const dealerButtonPosition = useMemo(() => {
     if (!snapshot) return null;
+    const { order, count } = seatOrder;
+    if (count === 0) return null;
     const selfPlayer = snapshot.players.find((p) => p.id === selfPlayerId);
-    const selfSeat = selfPlayer?.seatIndex ?? 0;
-    const rel = relativeSeatIndex(snapshot.dealerSeat, selfSeat, snapshot.settings.maxPlayers);
-    return getDealerButtonPosition(rel, snapshot.settings.maxPlayers);
-  }, [snapshot, selfPlayerId]);
+    const selfOrder = selfPlayer ? order.get(selfPlayer.seatIndex) ?? 0 : 0;
+    const dealerOrder = order.get(snapshot.dealerSeat) ?? 0;
+    const rel = ((dealerOrder - selfOrder) % count + count) % count;
+    return getDealerButtonPosition(rel, count);
+  }, [snapshot, selfPlayerId, seatOrder]);
 
   if (!snapshot) return null;
 
@@ -146,6 +160,7 @@ export function Table() {
                 winner={winnersByPlayer.get(p.id)}
                 showdownRevealed={snapshot.street === 'showdown'}
                 highlightedKeys={isSelf ? hint?.highlightedKeys : undefined}
+                seatScale={seatScaleForPlayerCount(seatOrder.count)}
               />
             );
           })}
