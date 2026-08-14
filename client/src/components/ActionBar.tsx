@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { GameStateSnapshot, LegalActions } from '../../../shared/types';
 import { sendPlayerAction, useTimeBankAction } from '../hooks/useGameConnection';
-import { formatChips } from './Chips';
+import { ChipStackIcon, formatChips } from './Chips';
 import { sound } from '../lib/sound';
 
 interface ActionBarProps {
@@ -32,11 +32,28 @@ export function ActionBar({ snapshot, legal, selfChips, timeBankMs }: ActionBarP
     setRaiseAmount(clamped);
   }
 
+  // Lets the raw text diverge from the clamped numeric amount while typing (so "" or a
+  // half-typed number doesn't get stomped back to the min every keystroke); clamps on blur/enter.
+  const [raiseInputText, setRaiseInputText] = useState(String(legal.minRaiseTo));
+  useEffect(() => {
+    setRaiseInputText(String(raiseAmount));
+  }, [raiseAmount]);
+
+  function commitTypedAmount(text: string) {
+    const parsed = Math.round(Number(text));
+    if (!Number.isFinite(parsed)) {
+      setRaiseInputText(String(raiseAmount));
+      return;
+    }
+    const clamped = Math.min(legal.maxRaiseTo, Math.max(legal.minRaiseTo, parsed));
+    setRaiseAmount(clamped);
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      className="pointer-events-auto relative w-full max-w-2xl mx-auto bg-ink-900/95 backdrop-blur border border-gold/30 rounded-2xl shadow-glow p-3 sm:p-4"
+      className="pointer-events-auto relative w-full max-w-2xl mx-auto bg-ink-900/95 backdrop-blur border border-gold/30 rounded-2xl shadow-glow p-2.5 sm:p-4"
     >
       {timeBankMs > 0 && (
         <button
@@ -51,10 +68,28 @@ export function ActionBar({ snapshot, legal, selfChips, timeBankMs }: ActionBarP
         </button>
       )}
       {showRaiseControls && (
-        <div className="mb-3">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+        <div className="mb-2">
+          <div className="flex items-center justify-between gap-2 text-xs text-slate-400 mb-1">
             <span>Bet amount</span>
-            <span className="font-display text-gold-light">{formatChips(raiseAmount)}</span>
+            <div className="flex items-center gap-1 bg-ink-800 border border-white/10 rounded-lg px-2 py-0.5 focus-within:border-gold/60">
+              <ChipStackIcon value={raiseAmount} size={10} />
+              <input
+                type="number"
+                inputMode="numeric"
+                min={legal.minRaiseTo}
+                max={legal.maxRaiseTo}
+                value={raiseInputText}
+                onChange={(e) => setRaiseInputText(e.target.value)}
+                onBlur={(e) => commitTypedAmount(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    commitTypedAmount((e.target as HTMLInputElement).value);
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                className="w-20 bg-transparent text-right font-display text-gold-light outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
           </div>
           <input
             type="range"
@@ -122,7 +157,7 @@ function ActionButton({ label, onClick, className }: { label: string; onClick: (
         sound.uiClick();
         onClick();
       }}
-      className={`py-3 px-4 rounded-xl transition active:scale-95 ${className}`}
+      className={`py-2.5 sm:py-3 px-4 rounded-xl transition active:scale-95 ${className}`}
     >
       {label}
     </button>

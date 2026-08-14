@@ -25,8 +25,9 @@ const THEME_VARS: Record<string, { light: string; dark: string }> = {
 
 // Fixed height for the bottom control strip, reserved at all times (even when empty) so the table
 // above it never resizes as your turn comes and goes — sized to fit the tallest real content (hint
-// badge + full bet-slider ActionBar) without wasting more vertical space than necessary.
-const BOTTOM_STRIP_HEIGHT = 220;
+// badge + full bet-slider ActionBar, including the typed-amount input) without wasting more
+// vertical space than necessary.
+const BOTTOM_STRIP_HEIGHT = 280;
 
 export function Table() {
   const snapshot = useGameStore((s) => s.snapshot);
