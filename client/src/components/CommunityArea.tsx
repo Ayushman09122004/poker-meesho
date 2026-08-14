@@ -24,14 +24,15 @@ export function CommunityArea({ snapshot, highlightedKeys }: CommunityAreaProps)
         )}
       </AnimatePresence>
 
-      <div className="flex gap-1 sm:gap-2 md:gap-2.5">
+      <div className="flex gap-2.5">
         {slots.map((_, i) =>
           cards[i] ? (
             <PlayingCard
               key={`community-${i}`}
               card={cards[i]}
               size="lg"
-              delay={i * 0.08}
+              delay={i * 0.1}
+              flyFrom={{ x: -(i - 2) * 106, y: -70 }}
               highlighted={highlightedKeys?.has(cardKey(cards[i]))}
               dimmed={revealFrom !== null && i >= revealFrom}
             />

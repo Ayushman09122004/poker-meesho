@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PublicPlayer, WinnerAnnouncement } from '../../../shared/types';
-import { AvatarBadge } from './AvatarBadge';
+import { AvatarBadge, AvatarBody, hasDrinkProp } from './AvatarBadge';
 import { PlayingCard } from './PlayingCard';
 import { ChipBadge, formatChips } from './Chips';
 import { TimerRing } from './TimerRing';
 import { Point } from '../lib/seatLayout';
 import { cardKey } from '../lib/handHint';
-import { useIsMobile } from '../hooks/useIsMobile';
 
 interface SeatProps {
   player: PublicPlayer;
@@ -22,6 +21,9 @@ interface SeatProps {
   showdownRevealed: boolean;
   highlightedKeys?: Set<string>;
   seatScale: number;
+  /** This player's position in deal order (0 = dealt first) — staggers the card-flight animation
+   * so the whole table looks like it's being dealt around one player at a time, not all at once. */
+  dealOrderIndex: number;
 }
 
 const ACTION_LABEL: Record<string, string> = {
@@ -33,8 +35,9 @@ const ACTION_LABEL: Record<string, string> = {
   all_in: 'All In',
 };
 
-const AVATAR_SIZE_DESKTOP = 76;
-const AVATAR_SIZE_MOBILE = 56;
+// Fixed reference size, in the table's uniformly-scaled coordinate space (see Table.tsx) — no
+// longer needs a separate mobile size since the whole table scales together as one unit.
+const AVATAR_SIZE = 76;
 
 export function Seat({
   player,
@@ -49,11 +52,11 @@ export function Seat({
   showdownRevealed,
   highlightedKeys,
   seatScale,
+  dealOrderIndex,
 }: SeatProps) {
   const folded = player.status === 'folded';
   const eliminated = player.status === 'eliminated';
   const isAllIn = player.status === 'all_in';
-  const isMobile = useIsMobile();
 
   // Replays a quick "playing a card" gesture on the avatar every time this player's action
   // changes (check/call/bet/raise/fold/all-in) — a lightweight stand-in for a full card-toss
@@ -66,35 +69,52 @@ export function Seat({
     }
     prevActionRef.current = player.lastAction;
   }, [player.lastAction]);
-  const AVATAR_SIZE = isMobile ? AVATAR_SIZE_MOBILE : AVATAR_SIZE_DESKTOP;
   const betChipTop = Math.round(AVATAR_SIZE * 1.55);
   const winnerCalloutY = -Math.round(AVATAR_SIZE * 1.55);
 
   // Unit vector from this seat toward the table center, used so bet chips slide toward the pot
-  // (rather than just fading in place) and won chips visibly arrive from the pot's direction.
-  const dx = position.left - 50;
-  const dy = position.top - 50;
-  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-  const towardCenter = { x: -(dx / dist) * 70, y: -(dy / dist) * 70 };
-  const fromCenter = { x: (dx / dist) * 70, y: (dy / dist) * 70 };
+  // (rather than just fading in place), won chips visibly arrive from the pot's direction, and
+  // hole cards fly in from the center — as if dealt from the dealer's position at the table's heart.
+  // Memoized on the seat's own position (stable for the whole hand) rather than recomputed as a
+  // fresh object every render: Framer Motion restarts an in-flight animation whenever the
+  // `animate`/`initial` target objects it's given change identity, even with identical values —
+  // and this component re-renders often (every snapshot broadcast, e.g. from the turn timer
+  // ticking), so an unmemoized flyFrom vector made the deal animation perpetually restart and
+  // never finish.
+  const geometry = useMemo(() => {
+    const dx = position.left - 50;
+    const dy = position.top - 50;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    return {
+      towardCenter: { x: -(dx / dist) * 70, y: -(dy / dist) * 70 },
+      fromCenter: { x: (dx / dist) * 70, y: (dy / dist) * 70 },
+      cardFlyFrom: { x: (dx / dist) * 150, y: (dy / dist) * 150 },
+    };
+  }, [position.left, position.top]);
+  const { towardCenter, fromCenter, cardFlyFrom } = geometry;
+  const dealDelay = dealOrderIndex * 0.15;
 
   // Self keeps seeing their own hole cards after folding (darker), just to compare later —
   // everyone else's folded/mucked cards stay hidden per normal poker etiquette.
   const showCards = player.holeCards ? player.holeCards.length > 0 : player.hasCards;
+  const showDrink = hasDrinkProp(player.avatarSeed) && !eliminated && player.isConnected;
 
   return (
     // Positioning lives on a plain div: a motion.div's own `animate` transform (used below for the
     // fold scale/opacity) completely overwrites any static `transform` set via its style prop, so
     // the centering translate(-50%,-50%) must live on a separate, non-animated wrapper.
     <div className="absolute" style={{ left: `${position.left}%`, top: `${position.top}%`, transform: 'translate(-50%, -50%)' }}>
+      {/* No `layout` prop here: Framer's layout/FLIP projection measures actual rendered
+          (post-transform) boxes, which breaks badly under the table's own ancestor scale() —
+          it was computing a wildly wrong compensating scale (observed 3x+) to "correct" a size
+          change that was really just the table's own zoom-to-fit, not a real layout change. */}
       <motion.div
-        layout
         className="flex flex-col items-center gap-1.5"
         animate={{ opacity: eliminated ? 0.35 : folded && !isSelf ? 0.55 : 1, scale: (folded ? 0.94 : 1) * seatScale }}
         transition={{ duration: 0.35 }}
       >
-      {/* Hole cards */}
-      <div className="flex gap-1 sm:gap-1.5 mb-1 h-16 sm:h-[92px]">
+      {/* Hole cards — fly in from the table center, staggered by deal order, like a real deal */}
+      <div className="flex gap-1.5 mb-1" style={{ height: 92 }}>
         <AnimatePresence>
           {showCards && (
             <>
@@ -103,7 +123,8 @@ export function Seat({
                 card={player.holeCards?.[0] ?? undefined}
                 faceDown={!player.holeCards}
                 size="md"
-                delay={0}
+                delay={dealDelay}
+                flyFrom={cardFlyFrom}
                 highlighted={!folded && (!!winner || !!highlightedKeys?.has(player.holeCards?.[0] ? cardKey(player.holeCards[0]) : ''))}
                 dimmed={folded}
               />
@@ -112,7 +133,8 @@ export function Seat({
                 card={player.holeCards?.[1] ?? undefined}
                 faceDown={!player.holeCards}
                 size="md"
-                delay={0.06}
+                delay={dealDelay + 0.08}
+                flyFrom={cardFlyFrom}
                 highlighted={!folded && (!!winner || !!highlightedKeys?.has(player.holeCards?.[1] ? cardKey(player.holeCards[1]) : ''))}
                 dimmed={folded}
               />
@@ -121,33 +143,43 @@ export function Seat({
         </AnimatePresence>
       </div>
 
-      {/* Avatar + timer ring */}
-      <div className="relative" style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}>
-        {isTurn && turnExpiresAt && <TimerRing expiresAt={turnExpiresAt} totalMs={turnTotalMs} size={AVATAR_SIZE} />}
-        <div
-          className={`absolute inset-[6px] rounded-full ${isTurn ? 'animate-pulseGlow' : ''} ${
-            winner ? 'ring-4 ring-gold shadow-glow' : ''
-          }`}
-        >
-          <AvatarBadge
-            seed={player.avatarSeed}
-            size={AVATAR_SIZE - 12}
-            dimmed={!player.isConnected || eliminated}
-            animated={!eliminated && !folded && player.isConnected}
-            gesturePulse={gesturePulse}
-          />
+      {/* Seated avatar: a body/torso silhouette behind the head badge, plus timer ring on top */}
+      <div className="relative" style={{ width: AVATAR_SIZE * 1.4, height: AVATAR_SIZE * 1.3 }}>
+        <div className="absolute left-1/2" style={{ top: AVATAR_SIZE * 0.6, transform: 'translateX(-50%)', zIndex: 0 }}>
+          <AvatarBody seed={player.avatarSeed} width={AVATAR_SIZE * 1.3} />
         </div>
-        {(isSB || isBB) && (
-          <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gold text-ink-950 text-xs font-black flex items-center justify-center border-2 border-ink-900">
-            {isSB ? 'SB' : 'BB'}
+        <div className="absolute left-1/2 top-0" style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, transform: 'translateX(-50%)', zIndex: 10 }}>
+          {isTurn && turnExpiresAt && <TimerRing expiresAt={turnExpiresAt} totalMs={turnTotalMs} size={AVATAR_SIZE} />}
+          <div
+            className={`absolute inset-[6px] rounded-full ${isTurn ? 'animate-pulseGlow' : ''} ${
+              winner ? 'ring-4 ring-gold shadow-glow' : ''
+            }`}
+          >
+            <AvatarBadge
+              seed={player.avatarSeed}
+              size={AVATAR_SIZE - 12}
+              dimmed={!player.isConnected || eliminated}
+              animated={!eliminated && !folded && player.isConnected}
+              gesturePulse={gesturePulse}
+            />
           </div>
-        )}
+          {(isSB || isBB) && (
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gold text-ink-950 text-xs font-black flex items-center justify-center border-2 border-ink-900 z-20">
+              {isSB ? 'SB' : 'BB'}
+            </div>
+          )}
+          {showDrink && (
+            <div className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full bg-ink-900 border border-white/20 flex items-center justify-center text-[11px] z-20">
+              🍹
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Name + chips — no truncation: long names wrap onto a second line instead of being cut
           off, since a hidden/clipped name was a reported bug and this is a low-traffic label. */}
-      <div className={`text-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-black/50 backdrop-blur-sm min-w-[84px] sm:min-w-[108px] max-w-[150px] sm:max-w-[180px] ${isTurn ? 'border border-gold/60' : 'border border-white/5'}`}>
-        <p className="text-xs sm:text-sm font-medium leading-tight break-words flex items-center gap-1 justify-center flex-wrap">
+      <div className={`text-center px-3 py-1.5 rounded-lg bg-black/50 backdrop-blur-sm min-w-[108px] max-w-[180px] ${isTurn ? 'border border-gold/60' : 'border border-white/5'}`}>
+        <p className="text-sm font-medium leading-tight break-words flex items-center gap-1 justify-center flex-wrap">
           {player.isHost && <span>👑</span>}
           <span>{player.name}</span>
           {isSelf && <span className="text-gold-light">(you)</span>}

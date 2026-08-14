@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { getAvatar } from '../lib/avatar';
 
@@ -26,6 +27,30 @@ function hashString(s: string): number {
 // perspective tilt, this reads as a 3D object without pulling in a WebGL/Three.js dependency —
 // which would meaningfully bloat the bundle and add render risk for a free-tier deploy, for a
 // gain (true 3D geometry on an emoji glyph) the player would barely notice at avatar size.
+/** A seated body/torso silhouette in the character's own colors — rendered behind the head badge
+ * so the avatar reads as a person sitting at the table instead of a floating orb. */
+export function AvatarBody({ seed, width }: { seed: string; width: number }) {
+  const { gradient, ring: accentColor } = getAvatar(seed);
+  const height = width * 0.62;
+  return (
+    <div
+      className="pointer-events-none"
+      style={{
+        width,
+        height,
+        borderRadius: '46% 46% 8% 8% / 78% 78% 8% 8%',
+        background: `linear-gradient(180deg, ${accentColor} 0%, ${gradient[1]} 85%)`,
+        boxShadow: 'inset 0 8px 12px rgba(255,255,255,0.18), inset 0 -10px 16px rgba(0,0,0,0.35), 0 6px 14px rgba(0,0,0,0.4)',
+      }}
+    />
+  );
+}
+
+/** ~1 in 3 characters "keep a drink at the table" — a small deterministic, decorative-only prop. */
+export function hasDrinkProp(seed: string): boolean {
+  return hashString(seed) % 3 === 0;
+}
+
 export function AvatarBadge({ seed, size = 44, ring = 'none', dimmed, animated, gesturePulse }: AvatarBadgeProps) {
   const { emoji, gradient, ring: accentColor } = getAvatar(seed);
   const ringClass = ring === 'gold' ? 'ring-2 ring-gold shadow-glow' : ring === 'gray' ? 'ring-2 ring-white/20' : '';
@@ -35,6 +60,21 @@ export function AvatarBadge({ seed, size = 44, ring = 'none', dimmed, animated, 
   const bobDuration = 2.6 + (seedHash % 8) / 5;
   const bobDelay = (seedHash % 10) / 10;
   const tiltDir = seedHash % 2 === 0 ? 1 : -1;
+
+  // Memoized so a busy parent re-rendering mid-loop (e.g. on every snapshot broadcast) doesn't
+  // hand Framer Motion "new" animate/transition objects and restart the infinite bob from scratch
+  // each time — same class of bug as the card-dealing animation getting stuck (see PlayingCard).
+  const idleAnimate = useMemo(
+    () =>
+      animated
+        ? { y: [0, -size * 0.06, 0], rotateY: [tiltDir * -9, tiltDir * 9, tiltDir * -9], rotateX: [3, -3, 3] }
+        : undefined,
+    [animated, size, tiltDir]
+  );
+  const idleTransition = useMemo(
+    () => (animated ? { duration: bobDuration, delay: bobDelay, repeat: Infinity, ease: 'easeInOut' as const } : undefined),
+    [animated, bobDuration, bobDelay]
+  );
 
   return (
     <div
@@ -50,14 +90,8 @@ export function AvatarBadge({ seed, size = 44, ring = 'none', dimmed, animated, 
       <motion.div
         className="relative w-full h-full rounded-full"
         style={{ transformStyle: 'preserve-3d' }}
-        animate={
-          animated
-            ? { y: [0, -size * 0.06, 0], rotateY: [tiltDir * -9, tiltDir * 9, tiltDir * -9], rotateX: [3, -3, 3] }
-            : undefined
-        }
-        transition={
-          animated ? { duration: bobDuration, delay: bobDelay, repeat: Infinity, ease: 'easeInOut' } : undefined
-        }
+        animate={idleAnimate}
+        transition={idleTransition}
       >
         {/* Bezel ring — the character's own accent color, like a poker-chip rim */}
         <div
