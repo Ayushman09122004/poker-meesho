@@ -7,7 +7,7 @@ import { StatsPanel } from './StatsPanel';
 import { HandHistoryPanel } from './HandHistoryPanel';
 import { HostControlsModal } from './HostControlsModal';
 import { HandHintBadge } from './HandHintBadge';
-import { PokerScene } from '../three/PokerScene';
+import { PokerTable2D } from './PokerTable2D';
 import { leaveRoom, requestRebuy } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
 import { computeHandHint } from '../lib/handHint';
@@ -16,7 +16,7 @@ import { computeHandHint } from '../lib/handHint';
 // above it never resizes as your turn comes and goes — sized to fit the tallest real content (hint
 // badge + full bet-slider ActionBar, including the typed-amount input) without wasting more
 // vertical space than necessary.
-const BOTTOM_STRIP_HEIGHT = 280;
+const BOTTOM_STRIP_HEIGHT = 250;
 
 export function Table() {
   const snapshot = useGameStore((s) => s.snapshot);
@@ -43,11 +43,13 @@ export function Table() {
     snapshot.settings.gameMode === 'assisted' ? computeHandHint(self?.holeCards, snapshot.communityCards) : null;
 
   return (
-    <div className="w-full h-full relative bg-ink-950 overflow-hidden flex flex-col">
-      {/* Table area — a real 3D scene (see three/PokerScene.tsx). React Three Fiber's Canvas
-          handles resize/aspect internally, so the camera reframes correctly at any container
-          size or browser zoom without the layout-collision risk a flat, breakpoint-based 2D
-          table had. */}
+    <div
+      className="w-full h-full relative overflow-hidden flex flex-col"
+      style={{ background: 'radial-gradient(ellipse 90% 75% at 50% 38%, #1a2130 0%, #0b0e15 55%, #040507 100%)' }}
+    >
+      <div className="absolute inset-0 opacity-[0.06] pointer-events-none table-noise" />
+      {/* Table area — a flat 2D table (see PokerTable2D.tsx), laid out in a fixed design space
+          and uniformly scaled to fit. */}
       <div className="relative flex-1 min-h-0">
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-3 pointer-events-none">
@@ -87,7 +89,7 @@ export function Table() {
 
         <WinnerBanner snapshot={snapshot} />
 
-        <PokerScene
+        <PokerTable2D
           snapshot={snapshot}
           selfPlayerId={selfPlayerId}
           highlightedKeys={hint?.highlightedKeys}

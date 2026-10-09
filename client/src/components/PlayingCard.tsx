@@ -81,39 +81,45 @@ export function PlayingCard({ card, faceDown, size = 'md', delay = 0, highlighte
       >
         {/* Face */}
         <div
-          className={`card-face absolute inset-0 flex items-center justify-center border bg-white shadow-card ${
-            highlighted ? 'ring-[3px] ring-gold shadow-glow scale-105' : 'border-slate-300'
+          className={`card-face absolute inset-0 flex items-center justify-center border shadow-card ${
+            highlighted ? 'ring-[3px] ring-gold shadow-glow' : 'border-black/10'
           }`}
-          style={{ borderRadius: dims.radius, fontSize: dims.font }}
+          style={{
+            borderRadius: dims.radius,
+            fontSize: dims.font * 1.6,
+            background: 'linear-gradient(160deg, #ffffff 0%, #f6f4ee 100%)',
+          }}
         >
           {card && (
             <>
               <div
-                className={`absolute top-1 left-1.5 flex flex-col items-center leading-none font-bold ${SUIT_COLOR[card.suit]}`}
-                style={{ fontSize: dims.corner }}
+                className={`absolute flex flex-col items-center leading-[0.9] font-display font-extrabold ${SUIT_COLOR[card.suit]}`}
+                style={{ fontSize: dims.corner * 1.45, top: dims.radius * 0.45, left: dims.radius * 0.55 }}
               >
-                <span>{card.rank}</span>
-                <span>{SUIT_SYMBOL[card.suit]}</span>
+                <span>{card.rank === 'T' ? '10' : card.rank}</span>
+                <span style={{ fontSize: dims.corner * 1.1 }}>{SUIT_SYMBOL[card.suit]}</span>
               </div>
-              <span className={`leading-none ${SUIT_COLOR[card.suit]}`}>{SUIT_SYMBOL[card.suit]}</span>
-              <div
-                className={`absolute bottom-1 right-1.5 flex flex-col items-center leading-none rotate-180 font-bold ${SUIT_COLOR[card.suit]}`}
-                style={{ fontSize: dims.corner }}
-              >
-                <span>{card.rank}</span>
-                <span>{SUIT_SYMBOL[card.suit]}</span>
-              </div>
+              <span className={`leading-none translate-x-[12%] translate-y-[14%] ${SUIT_COLOR[card.suit]}`}>
+                {SUIT_SYMBOL[card.suit]}
+              </span>
             </>
           )}
         </div>
         {/* Back */}
         <div
-          className="card-face absolute inset-0 bg-gradient-to-br from-ink-700 to-ink-900 border border-gold-dark/60 flex items-center justify-center"
-          style={{ borderRadius: dims.radius, transform: 'rotateY(180deg)' }}
+          className="card-face absolute inset-0 border-2 border-white shadow-card overflow-hidden"
+          style={{ borderRadius: dims.radius, transform: 'rotateY(180deg)', background: '#b3203a' }}
         >
-          <div className="w-2/3 h-2/3 rounded-full border-2 border-gold/40 flex items-center justify-center">
-            <span className="text-gold/70">♠</span>
-          </div>
+          <div
+            className="absolute"
+            style={{
+              inset: Math.max(2, dims.w * 0.07),
+              borderRadius: dims.radius * 0.6,
+              border: '1px solid rgba(255,255,255,0.55)',
+              background:
+                'repeating-linear-gradient(45deg, rgba(255,255,255,0.16) 0 2px, transparent 2px 7px), repeating-linear-gradient(-45deg, rgba(255,255,255,0.16) 0 2px, transparent 2px 7px), linear-gradient(160deg, #d13250, #8c1229)',
+            }}
+          />
         </div>
       </motion.div>
     </motion.div>
