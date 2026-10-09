@@ -8,15 +8,32 @@ import { AvatarBadge } from './AvatarBadge';
 import { ChipBadge, formatChips } from './Chips';
 import { TimerRing } from './TimerRing';
 
-// The whole table is laid out in this fixed design space and uniformly scaled to fit its container,
-// so seats, cards and bets never collide at odd viewport sizes.
-const STAGE_W = 1200;
-const STAGE_H = 790;
-const CENTER = { x: STAGE_W / 2, y: 392 };
-const TABLE_RX = 440;
-const TABLE_RY = 225;
-const SEAT_RX = 505;
-const SEAT_RY = 282;
+// The whole table is laid out in a fixed design space and uniformly scaled to fit its container,
+// so seats, cards and bets never collide at odd viewport sizes. Tall containers (phones held
+// upright) get a vertical oval instead of a squashed-down wide one.
+interface Layout {
+  w: number;
+  h: number;
+  cx: number;
+  cy: number;
+  tableRx: number;
+  tableRy: number;
+  seatRx: number;
+  seatRy: number;
+  portrait: boolean;
+}
+
+const LANDSCAPE: Layout = { w: 1200, h: 820, cx: 600, cy: 410, tableRx: 440, tableRy: 225, seatRx: 505, seatRy: 285, portrait: false };
+const PORTRAIT: Layout = { w: 860, h: 1540, cx: 430, cy: 725, tableRx: 270, tableRy: 420, seatRx: 320, seatRy: 505, portrait: true };
+
+// Your own seat (bigger cards, laid out sideways) is pushed further below the table in the portrait
+// layout so it clears the neighbouring seats on either side.
+const SELF_DROP_PORTRAIT = 175;
+
+// When the table is drawn small, seats/cards/chips are "zoomed" back up by up to this factor so
+// they stay readable — like zooming the browser, but without shrinking the betting controls.
+const MAX_BOOST = 1.45;
+const TARGET_EFFECTIVE_SCALE = 0.8;
 
 const THEME_FELT: Record<string, { light: string; dark: string; accent: string }> = {
   midnight: { light: '#24406e', dark: '#0b1530', accent: '#7aa2ff' },
@@ -44,33 +61,43 @@ interface PokerTable2DProps {
 
 const cardKey = (c: Card | undefined | null) => (c ? `${c.rank}${c.suit}` : '');
 
-function seatPoint(relIndex: number, count: number) {
+function seatPoint(L: Layout, relIndex: number, count: number) {
   // relIndex 0 (you) sits at the bottom centre; others go clockwise around the oval.
   const rad = ((90 + (relIndex * 360) / Math.max(1, count)) * Math.PI) / 180;
-  return { x: CENTER.x + SEAT_RX * Math.cos(rad), y: CENTER.y + SEAT_RY * Math.sin(rad) };
+  return { x: L.cx + L.seatRx * Math.cos(rad), y: L.cy + L.seatRy * Math.sin(rad) };
 }
 
-function towardCenter(p: { x: number; y: number }, t: number) {
-  return { x: p.x + (CENTER.x - p.x) * t, y: p.y + (CENTER.y - p.y) * t };
+function towardCenter(L: Layout, p: { x: number; y: number }, t: number) {
+  return { x: p.x + (L.cx - p.x) * t, y: p.y + (L.cy - p.y) * t };
 }
 
-function useFitScale() {
+function useFitLayout() {
   const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const [fit, setFit] = useState<{ layout: Layout; scale: number }>({ layout: LANDSCAPE, scale: 1 });
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const update = () => setScale(Math.min(el.clientWidth / STAGE_W, el.clientHeight / STAGE_H));
+    const update = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (!w || !h) return;
+      const layout = w / h < 0.9 ? PORTRAIT : LANDSCAPE;
+      setFit({ layout, scale: Math.min(w / layout.w, h / layout.h) });
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  return { ref, scale };
+  return { ref, ...fit };
 }
 
 export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersByPlayer, emotes }: PokerTable2DProps) {
-  const { ref, scale } = useFitScale();
+  const { ref, layout: L, scale } = useFitLayout();
+  const boost = Math.min(MAX_BOOST, Math.max(1, TARGET_EFFECTIVE_SCALE / scale));
+  // The board has to fit inside the felt, which is narrower in the portrait layout.
+  const boardBoost = Math.min(boost, L.portrait ? 1.25 : MAX_BOOST);
+  const CENTER = { x: L.cx, y: L.cy };
   const seatOrder = useMemo(() => occupiedSeatOrder(snapshot.players.map((p) => p.seatIndex)), [snapshot.players]);
   const count = snapshot.players.length;
   const selfPlayer = snapshot.players.find((p) => p.id === selfPlayerId);
@@ -80,19 +107,19 @@ export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersB
     return (((order - selfOrder) % count) + count) % count;
   };
   const felt = THEME_FELT[snapshot.settings.tableTheme] ?? THEME_FELT.emerald;
-  const seatScale = count <= 6 ? 1 : 0.88;
+  const seatScale = (count <= 6 ? 1 : 0.88) * boost;
   const inHand = snapshot.phase === 'hand_in_progress' || snapshot.phase === 'between_hands';
 
   const dealerPlayer = snapshot.players.find((p) => p.seatIndex === snapshot.dealerSeat);
   const dealerPos = dealerPlayer
     ? (() => {
-        const seat = seatPoint(relIndexFor(dealerPlayer.seatIndex), count);
-        const p = towardCenter(seat, 0.36);
+        const seat = seatPoint(L, relIndexFor(dealerPlayer.seatIndex), count);
+        const p = towardCenter(L, seat, 0.36);
         // Nudge sideways so the button doesn't sit on top of the bet chips.
         const dx = CENTER.x - seat.x;
         const dy = CENTER.y - seat.y;
         const len = Math.hypot(dx, dy) || 1;
-        return { x: p.x + (-dy / len) * 62, y: p.y + (dx / len) * 62 };
+        return { x: p.x + (-dy / len) * 62 * boost, y: p.y + (dx / len) * 62 * boost };
       })()
     : null;
 
@@ -105,15 +132,15 @@ export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersB
         style={{ background: `radial-gradient(ellipse 60% 55% at 50% 50%, ${felt.dark}55 0%, transparent 70%)` }}
       />
 
-      <div className="relative shrink-0" style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})` }}>
+      <div className="relative shrink-0" style={{ width: L.w, height: L.h, transform: `scale(${scale})` }}>
         {/* Table: shadow, rail, felt */}
         <div
           className="absolute rounded-full"
           style={{
-            left: CENTER.x - TABLE_RX - 10,
-            top: CENTER.y - TABLE_RY + 28,
-            width: (TABLE_RX + 10) * 2,
-            height: TABLE_RY * 2,
+            left: L.cx - L.tableRx - 10,
+            top: L.cy - L.tableRy + 28,
+            width: (L.tableRx + 10) * 2,
+            height: L.tableRy * 2,
             background: 'rgba(0,0,0,0.7)',
             filter: 'blur(28px)',
           }}
@@ -121,10 +148,10 @@ export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersB
         <div
           className="absolute rounded-full"
           style={{
-            left: CENTER.x - TABLE_RX,
-            top: CENTER.y - TABLE_RY,
-            width: TABLE_RX * 2,
-            height: TABLE_RY * 2,
+            left: L.cx - L.tableRx,
+            top: L.cy - L.tableRy,
+            width: L.tableRx * 2,
+            height: L.tableRy * 2,
             background: 'linear-gradient(180deg, #7a4a2a 0%, #4e2c16 45%, #2b170a 100%)',
             boxShadow: 'inset 0 3px 2px rgba(255,220,180,0.35), inset 0 -6px 10px rgba(0,0,0,0.6), 0 2px 0 #1a0d05',
           }}
@@ -151,8 +178,8 @@ export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersB
             />
             {/* Watermark */}
             <div
-              className="absolute left-1/2 -translate-x-1/2 font-display font-extrabold tracking-[0.35em] uppercase select-none"
-              style={{ top: 292, fontSize: 22, color: 'rgba(255,255,255,0.07)' }}
+              className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap font-display font-extrabold tracking-[0.35em] uppercase select-none"
+              style={{ top: '74%', fontSize: 22, color: 'rgba(255,255,255,0.07)' }}
             >
               Felt &amp; Friends
             </div>
@@ -160,7 +187,10 @@ export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersB
         </div>
 
         {/* Pot */}
-        <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: CENTER.x, top: CENTER.y - 95 }}>
+        <div
+          className="absolute"
+          style={{ left: CENTER.x, top: CENTER.y - 95 * boardBoost, transform: `translate(-50%, -50%) scale(${boardBoost})` }}
+        >
           <AnimatePresence>
             {snapshot.totalPot > 0 && (
               <motion.div
@@ -186,7 +216,10 @@ export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersB
         </div>
 
         {/* Community cards */}
-        <div className="absolute -translate-x-1/2 -translate-y-1/2 flex gap-2.5" style={{ left: CENTER.x, top: CENTER.y + 5 }}>
+        <div
+          className="absolute flex gap-2.5"
+          style={{ left: CENTER.x, top: CENTER.y + 5, transform: `translate(-50%, -50%) scale(${boardBoost})` }}
+        >
           {Array.from({ length: 5 }).map((_, i) => {
             const card = snapshot.communityCards[i];
             if (!card) return <CardSlot key={`slot-${i}`} size="md" />;
@@ -208,7 +241,7 @@ export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersB
         {snapshot.phase === 'hand_in_progress' && (
           <div
             className="absolute -translate-x-1/2 text-[11px] uppercase tracking-[0.3em] text-white/45 font-semibold"
-            style={{ left: CENTER.x, top: CENTER.y + 62 }}
+            style={{ left: CENTER.x, top: CENTER.y + 62 * boardBoost, fontSize: 11 * boardBoost }}
           >
             {snapshot.street}
           </div>
@@ -217,9 +250,13 @@ export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersB
         {/* Bets in front of each player */}
         {snapshot.players.map((p) => {
           if (p.bet <= 0) return null;
-          const pos = towardCenter(seatPoint(relIndexFor(p.seatIndex), count), 0.47);
+          const pos = towardCenter(L, seatPoint(L, relIndexFor(p.seatIndex), count), 0.47);
           return (
-            <div key={`bet-${p.id}`} className="absolute -translate-x-1/2 -translate-y-1/2 z-10" style={{ left: pos.x, top: pos.y }}>
+            <div
+              key={`bet-${p.id}`}
+              className="absolute z-10"
+              style={{ left: pos.x, top: pos.y, transform: `translate(-50%, -50%) scale(${boost})` }}
+            >
               <ChipBadge key={`${snapshot.street}-${p.bet}`} amount={p.bet} size="sm" />
             </div>
           );
@@ -243,7 +280,9 @@ export function PokerTable2D({ snapshot, selfPlayerId, highlightedKeys, winnersB
 
         {/* Seats */}
         {snapshot.players.map((p) => {
-          const pos = seatPoint(relIndexFor(p.seatIndex), count);
+          const rel = relIndexFor(p.seatIndex);
+          const pos = seatPoint(L, rel, count);
+          if (rel === 0 && L.portrait) pos.y += SELF_DROP_PORTRAIT;
           return (
             <div
               key={p.id}
@@ -298,7 +337,7 @@ function SeatPod({ player: p, snapshot, isSelf, winner, highlightedKeys, emote }
               key={`h-${snapshot.handNumber}-${p.id}-${i}`}
               card={card}
               faceDown={!card}
-              size={isSelf ? 'md' : 'sm'}
+              size={isSelf ? 'lg' : 'sm'}
               delay={i * 0.08}
               dimmed={folded}
               highlighted={!folded && !!card && (!!winner || !!highlightedKeys?.has(cardKey(card)))}

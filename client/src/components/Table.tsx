@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { ActionBar } from './ActionBar';
 import { WinnerBanner } from './WinnerBanner';
@@ -15,8 +15,32 @@ import { computeHandHint } from '../lib/handHint';
 // Fixed height for the bottom control strip, reserved at all times (even when empty) so the table
 // above it never resizes as your turn comes and goes — sized to fit the tallest real content (hint
 // badge + full bet-slider ActionBar, including the typed-amount input) without wasting more
-// vertical space than necessary.
+// vertical space than necessary. Small screens get the compact ActionBar and a shorter strip so the
+// table (and its cards) keep as much room as possible; short landscape screens (phones held
+// sideways) move the controls into a column beside the table instead.
 const BOTTOM_STRIP_HEIGHT = 250;
+const BOTTOM_STRIP_HEIGHT_COMPACT = 150;
+const SIDE_COLUMN_WIDTH = 290;
+
+type ControlsLayout = 'full' | 'compact' | 'side';
+
+function pickControlsLayout(): ControlsLayout {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  if (h < 520 && w > h * 1.3) return 'side';
+  if (h < 780 || w < 700) return 'compact';
+  return 'full';
+}
+
+function useControlsLayout() {
+  const [layout, setLayout] = useState(pickControlsLayout);
+  useEffect(() => {
+    const onResize = () => setLayout(pickControlsLayout());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return layout;
+}
 
 export function Table() {
   const snapshot = useGameStore((s) => s.snapshot);
@@ -33,6 +57,9 @@ export function Table() {
   const toggleHostSettings = useGameStore((s) => s.toggleHostSettings);
 
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const controls = useControlsLayout();
+  const compact = controls === 'compact';
+  const side = controls === 'side';
 
   if (!snapshot) return null;
 
@@ -44,20 +71,20 @@ export function Table() {
 
   return (
     <div
-      className="w-full h-full relative overflow-hidden flex flex-col"
+      className={`w-full h-full relative overflow-hidden flex ${side ? 'flex-row' : 'flex-col'}`}
       style={{ background: 'radial-gradient(ellipse 90% 75% at 50% 38%, #1a2130 0%, #0b0e15 55%, #040507 100%)' }}
     >
       <div className="absolute inset-0 opacity-[0.06] pointer-events-none table-noise" />
       {/* Table area — a flat 2D table (see PokerTable2D.tsx), laid out in a fixed design space
           and uniformly scaled to fit. */}
-      <div className="relative flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0 min-w-0">
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-3 pointer-events-none">
           <div className="flex items-center gap-2 pointer-events-auto">
             <div className="bg-black/50 backdrop-blur px-3 py-1.5 rounded-lg text-xs text-slate-300">
               Room <span className="font-display text-gold-light tracking-widest">{snapshot.roomCode}</span>
             </div>
-            <div className="bg-black/50 backdrop-blur px-3 py-1.5 rounded-lg text-xs text-slate-300">
+            <div className="hidden sm:block bg-black/50 backdrop-blur px-3 py-1.5 rounded-lg text-xs text-slate-300">
               Hand #{snapshot.handNumber} · Blinds {snapshot.settings.smallBlind}/{snapshot.settings.bigBlind}
             </div>
           </div>
@@ -89,23 +116,38 @@ export function Table() {
 
         <WinnerBanner snapshot={snapshot} />
 
-        <PokerTable2D
-          snapshot={snapshot}
-          selfPlayerId={selfPlayerId}
-          highlightedKeys={hint?.highlightedKeys}
-          winnersByPlayer={winnersByPlayer}
-          emotes={emotes}
-        />
+        {/* On small screens, keep the top seats clear of the top bar. */}
+        <div className="absolute inset-x-0 bottom-0" style={{ top: compact || side ? 44 : 0 }}>
+          <PokerTable2D
+            snapshot={snapshot}
+            selfPlayerId={selfPlayerId}
+            highlightedKeys={hint?.highlightedKeys}
+            winnersByPlayer={winnersByPlayer}
+            emotes={emotes}
+          />
+        </div>
       </div>
 
       {/* Bottom control strip — fixed height, always reserved, so the table above never resizes. */}
       <div
-        className="shrink-0 z-20 w-full flex flex-col items-center justify-end gap-2 p-3 pointer-events-none overflow-visible"
-        style={{ height: BOTTOM_STRIP_HEIGHT }}
+        className={`shrink-0 z-20 flex flex-col items-center gap-2 p-3 pointer-events-none overflow-visible ${
+          side ? 'h-full justify-center' : 'w-full justify-end'
+        }`}
+        style={
+          side
+            ? { width: SIDE_COLUMN_WIDTH, padding: 8 }
+            : { height: compact ? BOTTOM_STRIP_HEIGHT_COMPACT : BOTTOM_STRIP_HEIGHT, padding: compact ? 8 : undefined }
+        }
       >
         {snapshot.phase === 'hand_in_progress' && <HandHintBadge hint={hint} />}
         {isMyTurn && snapshot.legalActionsForViewer && self && (
-          <ActionBar snapshot={snapshot} legal={snapshot.legalActionsForViewer} selfChips={self.chips} timeBankMs={self.timeBankMs} />
+          <ActionBar
+            snapshot={snapshot}
+            legal={snapshot.legalActionsForViewer}
+            selfChips={self.chips}
+            timeBankMs={self.timeBankMs}
+            variant={controls}
+          />
         )}
         {self?.status === 'eliminated' && (
           <div className="pointer-events-auto bg-ink-900/90 border border-white/10 rounded-xl px-4 py-3 flex items-center gap-3">
@@ -127,7 +169,9 @@ export function Table() {
         )}
       </div>
 
-      <div className="absolute bottom-3 right-3 z-20">
+      {/* On compact screens the action bar spans the full width, so the chat button sits just
+          above the bottom strip instead of on top of the All-in button. */}
+      <div className="absolute right-3 z-20" style={{ bottom: compact ? BOTTOM_STRIP_HEIGHT_COMPACT + 4 : 12 }}>
         <ChatDock />
       </div>
 
