@@ -139,9 +139,11 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
       y: seat.y + (dir.y * 125 + perp.y * 85) * boost,
     };
     // Beside the seat (opposite side from the bet), not pushed in far enough to reach the board.
+    // Top-row seats keep their cards on that side, so their button drops below the cards instead.
+    const top = dir.y > 0.45;
     const dealer = {
-      x: seat.x + (dir.x * 62 - perp.x * 92) * boost,
-      y: seat.y + (dir.y * 62 - perp.y * 92) * boost,
+      x: seat.x + (top ? dir.x * 115 - perp.x * 60 : dir.x * 62 - perp.x * 92) * boost,
+      y: seat.y + (top ? dir.y * 115 - perp.y * 60 : dir.y * 62 - perp.y * 92) * boost,
     };
     const pos = { ...seat };
     if (rel === 0 && L.portrait) pos.y += SELF_DROP_PORTRAIT;
@@ -457,14 +459,26 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote }: SeatPod
   const cardHighlighted = (key: string) =>
     (seq.highlight && won > 0 && seq.winningKeys.has(key)) || (isSelf && !seq.ended && !!hint?.keys.has(key));
 
+  // Where the hole cards sit relative to the avatar centre. Seats along the top face down into the
+  // table, where their own name box is — so their cards go beside the avatar instead (the bet and
+  // dealer button use the other side). Everyone else's go toward the centre, far enough out to
+  // clear the avatar.
+  const cardOffset =
+    dir.y > 0.45
+      ? { x: 118, y: 0 }
+      : (() => {
+          const dist = Math.abs(dir.x) * 112 + (dir.y < 0 ? -dir.y * 104 : dir.y * 60);
+          return { x: dir.x * dist, y: dir.y * dist };
+        })();
+
   const opponentCards =
     !isSelf && hasCards ? (
       <div
-        className="absolute z-0 flex"
+        className={`absolute flex ${revealed ? 'z-20' : 'z-0'}`}
         style={{
           left: '50%',
-          top: avatarSize / 2,
-          transform: `translate(calc(-50% + ${dir.x * 80}px), calc(-50% + ${dir.y * 80}px))`,
+          top: avatarSize / 2 + 6,
+          transform: `translate(calc(-50% + ${cardOffset.x}px), calc(-50% + ${cardOffset.y}px))`,
         }}
       >
         {[0, 1].map((i) => {
