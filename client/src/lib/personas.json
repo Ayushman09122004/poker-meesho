@@ -47,8 +47,8 @@
     "from": "DC Comics",
     "group": "villain",
     "file": "/personas/joker.webp",
-    "focus": "55% 22%",
-    "zoom": 2,
+    "focus": "52% 33%",
+    "zoom": 2.2,
     "credit": {
       "author": "Fandom wiki",
       "license": "Fan use (non-Commons)",
@@ -243,8 +243,8 @@
     "from": "The Walking Dead",
     "group": "villain",
     "file": "/personas/negan.webp",
-    "focus": "40% 35%",
-    "zoom": 1.2,
+    "focus": "48% 52%",
+    "zoom": 1.05,
     "credit": {
       "author": "Fandom wiki",
       "license": "Fan use (non-Commons)",
@@ -411,8 +411,8 @@
     "from": "Resident Evil",
     "group": "icon",
     "file": "/personas/leon-kennedy.webp",
-    "focus": "50% 6%",
-    "zoom": 3.5,
+    "focus": "40% 12%",
+    "zoom": 3.4,
     "credit": {
       "author": "Fandom wiki",
       "license": "Fan use (non-Commons)",
@@ -453,8 +453,8 @@
     "from": "The Matrix",
     "group": "icon",
     "file": "/personas/neo.webp",
-    "focus": "52% 6%",
-    "zoom": 3.5,
+    "focus": "50% 17%",
+    "zoom": 3,
     "credit": {
       "author": "Fandom wiki",
       "license": "Fan use (non-Commons)",

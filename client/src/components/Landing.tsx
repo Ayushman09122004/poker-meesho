@@ -119,7 +119,7 @@ export function Landing() {
                     setError(null);
                   }}
                   onFocus={(e) => e.target.select()}
-                  placeholder="Type your name…"
+                  placeholder="Pick a character or type your name…"
                   className={`w-full mt-1 bg-ink-800 border-2 rounded-xl px-4 py-3 text-lg text-slate-100 placeholder:text-slate-500 outline-none focus:border-gold transition-colors ${
                     error && !name.trim() ? 'border-rose-500' : 'border-gold/40'
                   }`}
@@ -134,7 +134,15 @@ export function Landing() {
                   Photo credits
                 </button>
               </div>
-              <AvatarPicker value={avatarSeed} onChange={setAvatarSeed} />
+              <AvatarPicker
+                value={avatarSeed}
+                onChange={(seed) => {
+                  // Picking a character also makes it your name — still editable in the box above.
+                  setAvatarSeed(seed);
+                  setName(getAvatar(seed).name.slice(0, 20));
+                  setError(null);
+                }}
+              />
             </div>
 
             {mode === 'join' && (
