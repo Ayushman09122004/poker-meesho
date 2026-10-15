@@ -1,7 +1,8 @@
 // The persona roster for the avatar picker: popular characters players can sit at the table as.
-// Portraits are in-character images only (cosplay photos from Wikimedia Commons, or character art
-// and stills from fan wikis), listed with their sources in ./personas.json; a persona without an
-// image falls back to an initials badge in its signature colours.
+// Portraits are the character's own official look — anime art for anime characters, game art for
+// game characters, comic art or film/show stills otherwise (no cosplay) — taken from each
+// franchise's fan wiki and listed with their sources in ./personas.json. Real people on the list
+// use Commons photos. A persona without an image falls back to an initials badge.
 import personaImages from './personas.json';
 
 export type PersonaGroup = 'villain' | 'icon' | 'anime' | 'wildcard';

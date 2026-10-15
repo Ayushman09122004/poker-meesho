@@ -4,13 +4,13 @@
     "name": "Scorpion",
     "from": "Mortal Kombat",
     "group": "villain",
-    "file": "/personas/scorpion.jpg",
-    "focus": "60% 34%",
-    "zoom": 1.4,
+    "file": "/personas/scorpion.webp",
+    "focus": "48% 15%",
+    "zoom": 2.4,
     "credit": {
-      "author": "Pat Loika",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Scorpion_at_WonderCon_2012.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://mortalkombat.fandom.com/wiki/Hanzo_Hasashi"
     }
   },
   {
@@ -18,13 +18,13 @@
     "name": "Sukuna",
     "from": "Jujutsu Kaisen",
     "group": "villain",
-    "file": "/personas/sukuna.jpg",
-    "focus": "51% 38%",
-    "zoom": 1,
+    "file": "/personas/sukuna.webp",
+    "focus": "53% 30%",
+    "zoom": 2,
     "credit": {
-      "author": "Kiri Karma",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Ryomen_Sukuna_at_Made_in_Asia_2022_(52167990879).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://jujutsu-kaisen.fandom.com/wiki/Sukuna"
     }
   },
   {
@@ -32,13 +32,13 @@
     "name": "Darth Vader",
     "from": "Star Wars",
     "group": "villain",
-    "file": "/personas/darth-vader.jpg",
-    "focus": "69% 21%",
-    "zoom": 2,
+    "file": "/personas/darth-vader.webp",
+    "focus": "50% 6%",
+    "zoom": 3.5,
     "credit": {
-      "author": "Michele Miglionico",
-      "license": "CC BY 3.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Darth_Vader_cosplay.JPG"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://starwars.fandom.com/wiki/Anakin_Skywalker"
     }
   },
   {
@@ -46,13 +46,13 @@
     "name": "The Joker",
     "from": "DC Comics",
     "group": "villain",
-    "file": "/personas/joker.jpg",
-    "focus": "42% 28%",
-    "zoom": 1.3,
+    "file": "/personas/joker.webp",
+    "focus": "55% 22%",
+    "zoom": 2,
     "credit": {
-      "author": "Dasha Ocean",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Joker_at_AVA_Expo_2013.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://batman.fandom.com/wiki/Joker"
     }
   },
   {
@@ -60,13 +60,13 @@
     "name": "Venom",
     "from": "Marvel",
     "group": "villain",
-    "file": "/personas/venom.jpg",
-    "focus": "50% 33%",
-    "zoom": 1,
+    "file": "/personas/venom.webp",
+    "focus": "50% 45%",
+    "zoom": 1.4,
     "credit": {
-      "author": "Chemapool",
-      "license": "CC BY-SA 4.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Venom_cosplay_madrid.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://marvel.fandom.com/wiki/Venom_(Symbiote)_(Earth-616)"
     }
   },
   {
@@ -74,13 +74,13 @@
     "name": "Ghost Rider",
     "from": "Marvel",
     "group": "villain",
-    "file": "/personas/ghost-rider.jpg",
-    "focus": "38% 21%",
-    "zoom": 1.6,
+    "file": "/personas/ghost-rider.webp",
+    "focus": "78% 23%",
+    "zoom": 2.6,
     "credit": {
-      "author": "Miguel Discart",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Ghost_Rider_at_Comiccon_Brussels_2023.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://marvel.fandom.com/wiki/Johnathon_Blaze_(Earth-616)"
     }
   },
   {
@@ -88,13 +88,13 @@
     "name": "Spawn",
     "from": "Image Comics",
     "group": "villain",
-    "file": "/personas/spawn.jpg",
-    "focus": "37% 15%",
-    "zoom": 1.7,
+    "file": "/personas/spawn.webp",
+    "focus": "62% 22%",
+    "zoom": 2.2,
     "credit": {
-      "author": "Romer Jed Medina from Newark, NJ, United States",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Spawn_at_the_2021_New_York_Comic_Con_(51574064595).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://spawn.fandom.com/wiki/Al_Simmons"
     }
   },
   {
@@ -102,13 +102,13 @@
     "name": "Deadpool",
     "from": "Marvel",
     "group": "villain",
-    "file": "/personas/deadpool.jpg",
-    "focus": "47% 35%",
-    "zoom": 2.2,
+    "file": "/personas/deadpool.webp",
+    "focus": "55% 30%",
+    "zoom": 1.4,
     "credit": {
-      "author": "Altan Dilan",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Deadpool_Cosplay_-_MCM_Comic_Con_2016_(27122903610).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://xmenmovies.fandom.com/wiki/Deadpool"
     }
   },
   {
@@ -116,13 +116,13 @@
     "name": "Doom Slayer",
     "from": "DOOM",
     "group": "villain",
-    "file": "/personas/doom-slayer.jpg",
-    "focus": "58% 14%",
-    "zoom": 1.9,
+    "file": "/personas/doom-slayer.webp",
+    "focus": "50% 50%",
+    "zoom": 1,
     "credit": {
-      "author": "Pikawil from Laval, Canada",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Montreal_Comiccon_2016_-_Doomguy_2016_version_(28177119162).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://doom.fandom.com/wiki/Doom_Slayer_(games)"
     }
   },
   {
@@ -130,13 +130,13 @@
     "name": "Kratos",
     "from": "God of War",
     "group": "villain",
-    "file": "/personas/kratos.jpg",
-    "focus": "53% 30%",
-    "zoom": 1.4,
+    "file": "/personas/kratos.webp",
+    "focus": "59% 7%",
+    "zoom": 3,
     "credit": {
-      "author": "Claudio Marinangeli",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Kratos_Cosplayer_at_Lucca_Comics_%26_Games_2014.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://godofwar.fandom.com/wiki/Kratos"
     }
   },
   {
@@ -144,13 +144,13 @@
     "name": "Vergil",
     "from": "Devil May Cry",
     "group": "villain",
-    "file": "/personas/vergil.jpg",
-    "focus": "46% 21%",
-    "zoom": 2.2,
+    "file": "/personas/vergil.webp",
+    "focus": "53% 21%",
+    "zoom": 3.2,
     "credit": {
-      "author": "Oliver Ayala",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Vergil_Cosplayer_at_Anime_Los_Angeles_2016.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://devilmaycry.fandom.com/wiki/Vergil"
     }
   },
   {
@@ -158,13 +158,13 @@
     "name": "Dante",
     "from": "Devil May Cry",
     "group": "villain",
-    "file": "/personas/dante.jpg",
-    "focus": "41% 13%",
-    "zoom": 2.2,
+    "file": "/personas/dante.webp",
+    "focus": "45% 9%",
+    "zoom": 3.2,
     "credit": {
-      "author": "Super Festivals from Ft. Lauderdale, USA",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Dante_at_Florida_Supercon_2013_(9362474990).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://devilmaycry.fandom.com/wiki/Dante"
     }
   },
   {
@@ -172,13 +172,13 @@
     "name": "Shao Kahn",
     "from": "Mortal Kombat",
     "group": "villain",
-    "file": "/personas/shao-kahn.jpg",
-    "focus": "64% 26%",
-    "zoom": 2.2,
+    "file": "/personas/shao-kahn.webp",
+    "focus": "55% 15%",
+    "zoom": 2,
     "credit": {
-      "author": "William Tung",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Shao_Kahn_Cosplayer_at_the_2023_Comic-Con_International.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://mortalkombat.fandom.com/wiki/Shao_Kahn"
     }
   },
   {
@@ -186,13 +186,13 @@
     "name": "Noob Saibot",
     "from": "Mortal Kombat",
     "group": "villain",
-    "file": "/personas/noob-saibot.jpg",
-    "focus": "47% 18%",
-    "zoom": 1.8,
+    "file": "/personas/noob-saibot.webp",
+    "focus": "40% 8%",
+    "zoom": 2.8,
     "credit": {
-      "author": "Pikawil from Laval, Canada",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Montreal_Comiccon_2015_-_Noob_Saibot_(19292272359).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://mortalkombat.fandom.com/wiki/Noob_Saibot"
     }
   },
   {
@@ -200,13 +200,13 @@
     "name": "Sub-Zero",
     "from": "Mortal Kombat",
     "group": "villain",
-    "file": "/personas/sub-zero.jpg",
-    "focus": "47% 26%",
-    "zoom": 2.3,
+    "file": "/personas/sub-zero.webp",
+    "focus": "48% 6%",
+    "zoom": 3.4,
     "credit": {
-      "author": "Chongkian",
-      "license": "CC BY-SA 4.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Sub-Zero_at_Cos-Gen_2022.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://mortalkombat.fandom.com/wiki/Bi-Han"
     }
   },
   {
@@ -214,13 +214,13 @@
     "name": "Homelander",
     "from": "The Boys",
     "group": "villain",
-    "file": "/personas/homelander.jpg",
-    "focus": "47% 18%",
-    "zoom": 2,
+    "file": "/personas/homelander.webp",
+    "focus": "39% 23%",
+    "zoom": 2.2,
     "credit": {
-      "author": "Miguel Discart & Kiri Karma",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Comiccon_Brussels_2023_-_Cosplay_of_Homelander_1.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://theboys.fandom.com/wiki/Homelander"
     }
   },
   {
@@ -242,13 +242,13 @@
     "name": "Negan",
     "from": "The Walking Dead",
     "group": "villain",
-    "file": "/personas/negan.jpg",
-    "focus": "55% 45%",
-    "zoom": 1.1,
+    "file": "/personas/negan.webp",
+    "focus": "40% 35%",
+    "zoom": 1.2,
     "credit": {
-      "author": "Miguel Discart",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Negan_from_The_Walking_Dead_at_Made_in_Asia_2019_(47643314611).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://walkingdead.fandom.com/wiki/Negan_Smith_(TV_Universe)"
     }
   },
   {
@@ -284,13 +284,13 @@
     "name": "The Punisher",
     "from": "Marvel",
     "group": "villain",
-    "file": "/personas/punisher.jpg",
-    "focus": "50% 36%",
-    "zoom": 1.4,
+    "file": "/personas/punisher.webp",
+    "focus": "44% 49%",
+    "zoom": 2.8,
     "credit": {
-      "author": "William Tung",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:WonderCon_2019_-_The_Punisher_Cosplay.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://marvel.fandom.com/wiki/Frank_Castle_(Earth-616)"
     }
   },
   {
@@ -298,13 +298,13 @@
     "name": "Blade",
     "from": "Marvel",
     "group": "villain",
-    "file": "/personas/blade.jpg",
-    "focus": "62% 28%",
-    "zoom": 1.8,
+    "file": "/personas/blade.webp",
+    "focus": "83% 22%",
+    "zoom": 3,
     "credit": {
-      "author": "William Tung from USA",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:WonderCon_2015_-_Blade_(16861831668).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://marvel.fandom.com/wiki/Eric_Brooks_(Earth-616)"
     }
   },
   {
@@ -312,13 +312,13 @@
     "name": "Rorschach",
     "from": "Watchmen",
     "group": "villain",
-    "file": "/personas/rorschach.jpg",
-    "focus": "43% 31%",
-    "zoom": 1.3,
+    "file": "/personas/rorschach.webp",
+    "focus": "47% 34%",
+    "zoom": 3.5,
     "credit": {
-      "author": "Dasha Ocean",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Rorschach_at_AVA_Expo_2013.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://watchmen.fandom.com/wiki/Rorschach"
     }
   },
   {
@@ -326,13 +326,13 @@
     "name": "Batman",
     "from": "DC Comics",
     "group": "icon",
-    "file": "/personas/batman.jpg",
-    "focus": "63% 22%",
-    "zoom": 2.3,
+    "file": "/personas/batman.webp",
+    "focus": "55% 32%",
+    "zoom": 2.8,
     "credit": {
-      "author": "Super Festivals from Ft. Lauderdale, USA",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Batman_and_Joker_at_Florida_Supercon_2013_(9358428519).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://batman.fandom.com/wiki/Bruce_Wayne"
     }
   },
   {
@@ -354,13 +354,13 @@
     "name": "Geralt of Rivia",
     "from": "The Witcher",
     "group": "icon",
-    "file": "/personas/geralt.jpg",
-    "focus": "49% 31%",
-    "zoom": 1.5,
+    "file": "/personas/geralt.webp",
+    "focus": "55% 50%",
+    "zoom": 1,
     "credit": {
-      "author": "Dasha Ocean",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Geralt_of_Rivia_at_AVAExpo.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://witcher.fandom.com/wiki/Geralt_of_Rivia"
     }
   },
   {
@@ -396,13 +396,13 @@
     "name": "Agent 47",
     "from": "Hitman",
     "group": "icon",
-    "file": "/personas/agent-47.jpg",
-    "focus": "46% 38%",
-    "zoom": 1,
+    "file": "/personas/agent-47.webp",
+    "focus": "55% 25%",
+    "zoom": 1.6,
     "credit": {
-      "author": "Tim Bartel",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Hitman_at_Gamecom_2012_2_(cropped).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://hitman.fandom.com/wiki/Agent_47"
     }
   },
   {
@@ -410,13 +410,13 @@
     "name": "Leon Kennedy",
     "from": "Resident Evil",
     "group": "icon",
-    "file": "/personas/leon-kennedy.jpg",
-    "focus": "64% 17%",
-    "zoom": 2.2,
+    "file": "/personas/leon-kennedy.webp",
+    "focus": "50% 6%",
+    "zoom": 3.5,
     "credit": {
-      "author": "William Tung from USA",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:WonderCon_2015_-_Claire_Redfield_and_Leon_Scott_Kennedy_(Resident_Evil_2)_cosplay_(17049600395).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://residentevil.fandom.com/wiki/Leon_Scott_Kennedy"
     }
   },
   {
@@ -424,13 +424,13 @@
     "name": "Solid Snake",
     "from": "Metal Gear Solid",
     "group": "icon",
-    "file": "/personas/solid-snake.jpg",
-    "focus": "69% 15%",
-    "zoom": 2.5,
+    "file": "/personas/solid-snake.webp",
+    "focus": "52% 20%",
+    "zoom": 1.6,
     "credit": {
-      "author": "Ryan Quick from Greenbelt, MD, USA",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Dragon_Con_2014_-_Solid_Snake_and_Naked_Snake_(15447831839).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://metalgear.fandom.com/wiki/Solid_Snake"
     }
   },
   {
@@ -438,13 +438,13 @@
     "name": "Master Chief",
     "from": "Halo",
     "group": "icon",
-    "file": "/personas/master-chief.jpg",
-    "focus": "45% 41%",
-    "zoom": 1.5,
+    "file": "/personas/master-chief.webp",
+    "focus": "45% 10%",
+    "zoom": 3,
     "credit": {
-      "author": "Miguel Discart",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Master_Chief_at_Made_in_Asia_2022_(52125512657).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://halo.fandom.com/wiki/John-117"
     }
   },
   {
@@ -452,13 +452,13 @@
     "name": "Neo",
     "from": "The Matrix",
     "group": "icon",
-    "file": "/personas/neo.jpg",
-    "focus": "54% 23%",
-    "zoom": 1.4,
+    "file": "/personas/neo.webp",
+    "focus": "52% 6%",
+    "zoom": 3.5,
     "credit": {
-      "author": "Flickr user 50294369@N07",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Neo_and_Agents_Smith_(cropped).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://matrix.fandom.com/wiki/Neo"
     }
   },
   {
@@ -466,13 +466,13 @@
     "name": "Jack Sparrow",
     "from": "Pirates of the Caribbean",
     "group": "icon",
-    "file": "/personas/jack-sparrow.jpg",
-    "focus": "50% 23%",
-    "zoom": 1.8,
+    "file": "/personas/jack-sparrow.webp",
+    "focus": "50% 24%",
+    "zoom": 1.6,
     "credit": {
-      "author": "Super Festivals from Ft. Lauderdale, USA",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Jack_Sparrow_at_GalaxyCon_Richmond_2020_(49666724063).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://pirates.fandom.com/wiki/Jack_Sparrow"
     }
   },
   {
@@ -494,13 +494,13 @@
     "name": "Walter White",
     "from": "Breaking Bad",
     "group": "icon",
-    "file": "/personas/walter-white.jpg",
-    "focus": "66% 30%",
-    "zoom": 1.6,
+    "file": "/personas/walter-white.webp",
+    "focus": "48% 30%",
+    "zoom": 1.3,
     "credit": {
-      "author": "Pat Loika",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:LBCC_2013_-_Ghost_and_Heisenberg_(11027665114)_(cropped).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://breakingbad.fandom.com/wiki/Walter_White"
     }
   },
   {
@@ -508,13 +508,13 @@
     "name": "Saul Goodman",
     "from": "Better Call Saul",
     "group": "icon",
-    "file": "/personas/saul-goodman.jpg",
-    "focus": "46% 28%",
-    "zoom": 1.3,
+    "file": "/personas/saul-goodman.webp",
+    "focus": "40% 15%",
+    "zoom": 1.8,
     "credit": {
-      "author": "Irmin Wehmeier (iwpfw); derivative work: RanZag",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Bob_Odenkirk_as_Saul_Goodman_during_shooting_Breaking_Bad.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://breakingbad.fandom.com/wiki/Saul_Goodman"
     }
   },
   {
@@ -550,13 +550,13 @@
     "name": "Itachi Uchiha",
     "from": "Naruto",
     "group": "anime",
-    "file": "/personas/itachi.jpg",
-    "focus": "53% 26%",
-    "zoom": 1.6,
+    "file": "/personas/itachi.webp",
+    "focus": "50% 35%",
+    "zoom": 1.3,
     "credit": {
-      "author": "Aanthonym",
-      "license": "CC BY-SA 4.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_d%27Itachi_Uchiwa_@aanthonym.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://naruto.fandom.com/wiki/Itachi_Uchiha"
     }
   },
   {
@@ -564,13 +564,13 @@
     "name": "Madara Uchiha",
     "from": "Naruto",
     "group": "anime",
-    "file": "/personas/madara.jpg",
-    "focus": "53% 22%",
-    "zoom": 1.4,
+    "file": "/personas/madara.webp",
+    "focus": "50% 35%",
+    "zoom": 1.2,
     "credit": {
-      "author": "_hakkencoser_",
-      "license": "CC BY-SA 4.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Madara_Uchiwa.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://naruto.fandom.com/wiki/Madara_Uchiha"
     }
   },
   {
@@ -578,13 +578,13 @@
     "name": "Toji Fushiguro",
     "from": "Jujutsu Kaisen",
     "group": "anime",
-    "file": "/personas/toji.jpg",
-    "focus": "51% 19%",
-    "zoom": 2,
+    "file": "/personas/toji.webp",
+    "focus": "50% 10%",
+    "zoom": 3,
     "credit": {
-      "author": "Saray Vargas 1312",
-      "license": "CC BY-SA 4.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Toji_Fushiguro_cosplay.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://jujutsu-kaisen.fandom.com/wiki/Toji_Fushiguro"
     }
   },
   {
@@ -620,13 +620,13 @@
     "name": "Levi Ackerman",
     "from": "Attack on Titan",
     "group": "anime",
-    "file": "/personas/levi.jpg",
-    "focus": "50% 23%",
-    "zoom": 2,
+    "file": "/personas/levi.webp",
+    "focus": "50% 45%",
+    "zoom": 1,
     "credit": {
-      "author": "玄史生",
-      "license": "CC0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplayer_of_Levi_Ackerman,_Attack_on_Titan_in_FF25_20150201a.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://attackontitan.fandom.com/wiki/Levi_Ackermann"
     }
   },
   {
@@ -634,13 +634,13 @@
     "name": "Eren Yeager",
     "from": "Attack on Titan",
     "group": "anime",
-    "file": "/personas/eren.jpg",
-    "focus": "58% 23%",
-    "zoom": 2.1,
+    "file": "/personas/eren.webp",
+    "focus": "50% 45%",
+    "zoom": 1,
     "credit": {
-      "author": "GabboT",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Eren_Yeager.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://attackontitan.fandom.com/wiki/Eren_Yeager"
     }
   },
   {
@@ -662,13 +662,13 @@
     "name": "Mr. Bean",
     "from": "Rowan Atkinson",
     "group": "wildcard",
-    "file": "/personas/mr-bean.jpg",
-    "focus": "54% 42%",
-    "zoom": 1,
+    "file": "/personas/mr-bean.webp",
+    "focus": "45% 8%",
+    "zoom": 3.2,
     "credit": {
-      "author": "Antonio Zugaldia from Brussels, Belgium",
-      "license": "CC BY 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Mr._Bean_2007.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://mrbean.fandom.com/wiki/Mr._Bean_(character)"
     }
   },
   {
@@ -676,13 +676,13 @@
     "name": "Shrek",
     "from": "DreamWorks",
     "group": "wildcard",
-    "file": "/personas/shrek.jpg",
-    "focus": "56% 16%",
-    "zoom": 1.8,
+    "file": "/personas/shrek.webp",
+    "focus": "53% 18%",
+    "zoom": 2.2,
     "credit": {
-      "author": "GabboT",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Toronto_2015_-_Shrek_(16723895657).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://shrek.fandom.com/wiki/Shrek_(character)"
     }
   },
   {
@@ -690,13 +690,13 @@
     "name": "Homer Simpson",
     "from": "The Simpsons",
     "group": "wildcard",
-    "file": "/personas/homer.jpg",
-    "focus": "52% 23%",
-    "zoom": 2.3,
+    "file": "/personas/homer.webp",
+    "focus": "58% 45%",
+    "zoom": 1.3,
     "credit": {
-      "author": "Chongkian",
-      "license": "CC BY-SA 4.0",
-      "source": "https://commons.wikimedia.org/wiki/File:Cosplay_of_Homer_Simpson_at_Comic_Fiesta_2022.jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://simpsons.fandom.com/wiki/Homer_Simpson"
     }
   },
   {
@@ -704,13 +704,13 @@
     "name": "Peter Griffin",
     "from": "Family Guy",
     "group": "wildcard",
-    "file": "/personas/peter-griffin.jpg",
-    "focus": "50% 21%",
-    "zoom": 1.6,
+    "file": "/personas/peter-griffin.webp",
+    "focus": "52% 25%",
+    "zoom": 2.2,
     "credit": {
-      "author": "William Tung from USA",
-      "license": "CC BY-SA 2.0",
-      "source": "https://commons.wikimedia.org/wiki/File:WonderCon_2015_-_Peter_Griffin_cosplay_(17048137772).jpg"
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://familyguy.fandom.com/wiki/Peter_Griffin"
     }
   },
   {
