@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { FxKind } from '../lib/characterFx';
+import { FxKind, VoiceClip } from '../lib/characterFx';
 
 // The signature win move that plays over the table when a character takes a pot: a particle burst
 // from their seat, a full-table overlay for the bigger moves, and their catchphrase. Everything is
@@ -16,6 +16,7 @@ export interface FxEvent {
   kind: FxKind;
   color: string;
   line: string;
+  voice?: VoiceClip;
 }
 
 type Shape = 'spark' | 'shard' | 'drop' | 'puff' | 'confetti';

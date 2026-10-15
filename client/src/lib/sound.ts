@@ -8,6 +8,7 @@ class SoundManager {
 
   setMuted(muted: boolean) {
     this.muted = muted;
+    if (muted) this.stopVoice();
   }
 
   private ensureCtx(): AudioContext | null {
@@ -123,6 +124,63 @@ class SoundManager {
   bigWin() {
     const notes = [392, 523.25, 659.25, 783.99, 1046.5, 1318.5];
     notes.forEach((f, i) => this.tone(f, 0.35, { type: 'triangle', gain: 0.25, delay: i * 0.08 }));
+  }
+
+  private voice: HTMLAudioElement | null = null;
+  private voiceStop: ReturnType<typeof setTimeout> | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
+
+  /**
+   * Plays a character's voice clip. Clips come from fan soundboards and vary wildly in loudness
+   * and length, so every clip runs through a limiter (no ear-blasting) and is faded out after
+   * `maxMs`. Only one voice plays at a time — a new one cuts off the last.
+   */
+  playVoice(clip: { url: string; gain?: number; start?: number; length?: number }) {
+    const { url, gain: clipGain = 1, start = 0, length = 4.5 } = clip;
+    const maxMs = length * 1000;
+    const ctx = this.ensureCtx();
+    if (!ctx || !this.masterGain) return;
+    this.stopVoice();
+    if (!this.limiter) {
+      this.limiter = ctx.createDynamicsCompressor();
+      this.limiter.threshold.value = -26;
+      this.limiter.knee.value = 6;
+      this.limiter.ratio.value = 14;
+      this.limiter.attack.value = 0.003;
+      this.limiter.release.value = 0.2;
+      const makeup = ctx.createGain();
+      makeup.gain.value = 1.6;
+      this.limiter.connect(makeup);
+      makeup.connect(this.masterGain);
+    }
+    const audio = new Audio(url);
+    audio.preload = 'auto';
+    if (start > 0) audio.currentTime = start;
+    const gain = ctx.createGain();
+    gain.gain.value = clipGain;
+    try {
+      ctx.createMediaElementSource(audio).connect(gain);
+      gain.connect(this.limiter);
+    } catch {
+      return;
+    }
+    this.voice = audio;
+    audio.play().catch(() => {});
+    this.voiceStop = setTimeout(() => {
+      // Fade the tail out instead of chopping it.
+      gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.4);
+      setTimeout(() => audio.pause(), 450);
+    }, maxMs);
+  }
+
+  stopVoice() {
+    if (this.voiceStop) clearTimeout(this.voiceStop);
+    this.voiceStop = null;
+    if (this.voice) {
+      this.voice.pause();
+      this.voice = null;
+    }
   }
 
   /** Low double thump — loops under an all-in run-out. */

@@ -12,17 +12,31 @@ export function ChatDock({ embedded = false }: { embedded?: boolean }) {
   const chat = useGameStore((s) => s.chat);
   // Your own character's catchphrase as a one-tap line.
   const mySeed = useGameStore((s) => s.snapshot?.players.find((p) => p.id === s.selfPlayerId)?.avatarSeed);
-  const catchphrase = mySeed ? fxForSeed(mySeed).line : null;
+  const myFx = mySeed ? fxForSeed(mySeed) : null;
+  const catchphrase = myFx?.line ?? null;
   const [text, setText] = useState('');
   const [open, setOpen] = useState(embedded);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastCountRef = useRef(0);
 
+  // When someone sends their own character's catchphrase, everyone hears it in that character's
+  // voice — at most once every 6 seconds per player, so it can't be spammed.
+  const lastVoiceAt = useRef(new Map<string, number>());
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     if (chat.length > lastCountRef.current && lastCountRef.current > 0) {
       const last = chat[chat.length - 1];
-      if (!last.isSystem) sound.message();
+      if (!last.isSystem) {
+        const sender = useGameStore.getState().snapshot?.players.find((p) => p.id === last.playerId);
+        const fx = sender ? fxForSeed(sender.avatarSeed) : null;
+        const now = Date.now();
+        if (sender && fx?.voice && last.text === fx.line && now - (lastVoiceAt.current.get(sender.id) ?? 0) > 6000) {
+          lastVoiceAt.current.set(sender.id, now);
+          sound.playVoice(fx.voice);
+        } else {
+          sound.message();
+        }
+      }
     }
     lastCountRef.current = chat.length;
   }, [chat]);
@@ -61,10 +75,10 @@ export function ChatDock({ embedded = false }: { embedded?: boolean }) {
         {catchphrase && (
           <button
             onClick={() => sendChat(catchphrase)}
-            title="Your character's catchphrase"
+            title={myFx?.voice ? "Say your character's line — everyone hears it in their voice" : "Your character's catchphrase"}
             className="text-[11px] px-2 py-1 rounded-full bg-gold/20 border border-gold/50 hover:bg-gold/30 text-gold-light shrink-0 transition font-semibold"
           >
-            ⭐ {catchphrase}
+            {myFx?.voice ? '🔊' : '⭐'} {catchphrase}
           </button>
         )}
         {QUICK_PHRASES.map((p) => (

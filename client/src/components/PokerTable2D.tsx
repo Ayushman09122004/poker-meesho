@@ -220,12 +220,16 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
       if (!p) continue;
       const fx = fxForSeed(p.avatarSeed);
       const g = geometryFor(p.seatIndex);
-      events.push({ id: ++fxId.current, x: g.pos.x, y: g.pos.y, potX: potPos.x, potY: potPos.y, kind: fx.kind, color: fx.color, line: fx.line });
+      events.push({ id: ++fxId.current, x: g.pos.x, y: g.pos.y, potX: potPos.x, potY: potPos.y, kind: fx.kind, color: fx.color, line: fx.line, voice: fx.voice });
     }
     if (events.length > 0) {
       setTimeout(() => {
         setFxEvents(events);
-        sound.signature(events[0].kind);
+        // The winner says their line in their own voice (first winner only on a split pot); the
+        // synthesized whoosh only plays for characters without a voice clip, so voices stay clear.
+        const voiced = events.find((e) => e.voice);
+        if (voiced?.voice) sound.playVoice(voiced.voice);
+        else sound.signature(events[0].kind);
         if (events.some((e) => SHAKY.has(e.kind))) setShakeKey((k) => k + 1);
       }, SHOWDOWN_TIMING.chipFlightMs * 0.6);
       setTimeout(() => setFxEvents((cur) => cur.filter((e) => !events.includes(e))), SHOWDOWN_TIMING.chipFlightMs * 0.6 + FX_DURATION_MS);
