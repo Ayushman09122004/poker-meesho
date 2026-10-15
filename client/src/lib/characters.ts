@@ -1,42 +1,145 @@
-// A roster of original poker personas for the avatar picker. Deliberately invented characters
-// (not real people, brands, or copyrighted properties) so the game can ship publicly without any
-// IP concerns, while still giving players something more fun and identity-driven than a bare emoji.
+// The persona roster for the avatar picker: popular characters players can sit at the table as.
+// Portraits come from freely licensed Wikimedia Commons photos (cosplay for fictional characters),
+// listed with their credits in ./personas.json; any persona without a photo falls back to an
+// initials badge in its signature colours.
+import personaImages from './personas.json';
+
+export type PersonaGroup = 'villain' | 'icon' | 'anime' | 'wildcard';
+
+export interface PersonaCredit {
+  author: string;
+  license: string;
+  source: string;
+}
 
 export interface Character {
   id: string;
   name: string;
+  /** Franchise / where they're from, shown as the subtitle. */
   title: string;
+  group: PersonaGroup;
+  /** Portrait image URL, or null when no freely licensed photo was found. */
+  image: string | null;
+  /** CSS object-position of the face inside the portrait. */
+  focus: string;
+  /** How far to zoom into `focus` so the face fills the circle. */
+  zoom: number;
+  credit: PersonaCredit | null;
+  /** Fallback glyph (initials) when there is no image. */
   emoji: string;
   gradient: [string, string];
   ring: string;
 }
 
-export const CHARACTERS: Character[] = [
-  { id: 'ace-mccool', name: 'Ace McCool', title: 'Never blinks first', emoji: '🕶️', gradient: ['#f59e0b', '#b45309'], ring: '#fbbf24' },
-  { id: 'lucky-luna', name: 'Lucky Luna', title: 'Runs it twice, wins it thrice', emoji: '🍀', gradient: ['#22c55e', '#15803d'], ring: '#4ade80' },
-  { id: 'big-slick-bill', name: 'Big Slick Bill', title: 'A gentleman with a mean river card', emoji: '🎩', gradient: ['#64748b', '#1e293b'], ring: '#cbd5e1' },
-  { id: 'ivy-bluffer', name: 'Ivy the Bluffer', title: 'You can never tell', emoji: '🃏', gradient: ['#ec4899', '#9d174d'], ring: '#f472b6' },
-  { id: 'midnight-rose', name: 'Midnight Rose', title: 'Cold hands, colder stare', emoji: '🌹', gradient: ['#8b5cf6', '#5b21b6'], ring: '#c4b5fd' },
-  { id: 'the-shark', name: 'The Shark', title: 'Smells chips from a mile away', emoji: '🦈', gradient: ['#06b6d4', '#0e7490'], ring: '#67e8f9' },
-  { id: 'foxy-nell', name: 'Foxy Nell', title: 'Sly on the river', emoji: '🦊', gradient: ['#f97316', '#c2410c'], ring: '#fdba74' },
-  { id: 'ironclaw', name: 'Ironclaw', title: 'King of the felt', emoji: '🦁', gradient: ['#eab308', '#a16207'], ring: '#fde047' },
-  { id: 'professor-chips', name: 'Professor Chips', title: 'Calculates pot odds in their sleep', emoji: '🧠', gradient: ['#3b82f6', '#1d4ed8'], ring: '#93c5fd' },
-  { id: 'diamond-duchess', name: 'Diamond Duchess', title: 'Only plays the nuts', emoji: '💎', gradient: ['#06b6d4', '#4338ca'], ring: '#a5f3fc' },
-  { id: 'neon-ninja', name: 'Neon Ninja', title: 'Strikes on the turn', emoji: '⚡', gradient: ['#a855f7', '#6b21a8'], ring: '#e9d5ff' },
-  { id: 'grandma-grit', name: 'Grandma Grit', title: 'Do not let the cardigan fool you', emoji: '👵', gradient: ['#f472b6', '#be185d'], ring: '#fbcfe8' },
-  { id: 'wildcard-wolf', name: 'Wildcard Wolf', title: 'Hunts in the dark hours', emoji: '🐺', gradient: ['#475569', '#0f172a'], ring: '#cbd5e1' },
-  { id: 'sir-fold-a-lot', name: 'Sir Fold-a-Lot', title: 'Lives to fight another hand', emoji: '🎭', gradient: ['#14b8a6', '#0f766e'], ring: '#5eead4' },
-  { id: 'baron-von-bluff', name: 'Baron von Bluff', title: 'Bets big, sleeps fine', emoji: '🧛', gradient: ['#7c3aed', '#312e81'], ring: '#c7d2fe' },
-  { id: 'cosmic-kat', name: 'Cosmic Kat', title: 'Out of this world reads', emoji: '🐱', gradient: ['#0ea5e9', '#1e3a8a'], ring: '#7dd3fc' },
-  { id: 'ember-dragon', name: 'Ember the Dragon', title: 'Sets the pot on fire', emoji: '🐲', gradient: ['#ef4444', '#7f1d1d'], ring: '#fca5a5' },
-  { id: 'whiskers-mcfold', name: 'Whiskers McFold', title: 'Knows when to hop away', emoji: '🐰', gradient: ['#f5f5f4', '#a8a29e'], ring: '#e7e5e4' },
-  { id: 'trickster-tanuki', name: 'Trickster Tanuki', title: 'Nothing is ever as it seems', emoji: '🦝', gradient: ['#78716c', '#292524'], ring: '#d6d3d1' },
-  { id: 'sergeant-stacks', name: 'Sergeant Stacks', title: 'Never retreats from a raise', emoji: '🎖️', gradient: ['#16a34a', '#14532d'], ring: '#86efac' },
-  { id: 'doctor-doubledown', name: 'Doctor Doubledown', title: 'Prescribes all-ins', emoji: '🥼', gradient: ['#0891b2', '#164e63'], ring: '#a5f3fc' },
-  { id: 'empress-emerald', name: 'Empress Emerald', title: 'Rules the table with a glance', emoji: '👑', gradient: ['#10b981', '#065f46'], ring: '#6ee7b7' },
-  { id: 'rowdy-rex', name: 'Rowdy Rex', title: 'A dinosaur with a big stack', emoji: '🦖', gradient: ['#84cc16', '#3f6212'], ring: '#bef264' },
-  { id: 'captain-wildcard', name: 'Captain Wildcard', title: 'Sails into every pot', emoji: '⚓', gradient: ['#2563eb', '#1e3a8a'], ring: '#93c5fd' },
+export const PERSONA_GROUPS: { id: PersonaGroup; label: string }[] = [
+  { id: 'villain', label: 'Villains & antiheroes' },
+  { id: 'icon', label: 'Icons' },
+  { id: 'anime', label: 'Anime' },
+  { id: 'wildcard', label: 'Wildcards' },
 ];
+
+// [id, name, from, group, signature colour]
+const ROSTER: [string, string, string, PersonaGroup, string][] = [
+  ['scorpion', 'Scorpion', 'Mortal Kombat', 'villain', '#f5b301'],
+  ['sukuna', 'Sukuna', 'Jujutsu Kaisen', 'villain', '#e11d48'],
+  ['darth-vader', 'Darth Vader', 'Star Wars', 'villain', '#dc2626'],
+  ['joker', 'The Joker', 'DC', 'villain', '#7c3aed'],
+  ['venom', 'Venom', 'Marvel', 'villain', '#e5e7eb'],
+  ['ghost-rider', 'Ghost Rider', 'Marvel', 'villain', '#f97316'],
+  ['spawn', 'Spawn', 'Image Comics', 'villain', '#16a34a'],
+  ['deadpool', 'Deadpool', 'Marvel', 'villain', '#dc2626'],
+  ['doom-slayer', 'Doom Slayer', 'DOOM', 'villain', '#65a30d'],
+  ['kratos', 'Kratos', 'God of War', 'villain', '#b91c1c'],
+  ['vergil', 'Vergil', 'Devil May Cry', 'villain', '#3b82f6'],
+  ['dante', 'Dante', 'Devil May Cry', 'villain', '#dc2626'],
+  ['shao-kahn', 'Shao Kahn', 'Mortal Kombat', 'villain', '#a16207'],
+  ['noob-saibot', 'Noob Saibot', 'Mortal Kombat', 'villain', '#475569'],
+  ['sub-zero', 'Sub-Zero', 'Mortal Kombat', 'villain', '#38bdf8'],
+  ['homelander', 'Homelander', 'The Boys', 'villain', '#2563eb'],
+  ['billy-butcher', 'Billy Butcher', 'The Boys', 'villain', '#78716c'],
+  ['negan', 'Negan', 'The Walking Dead', 'villain', '#991b1b'],
+  ['hannibal', 'Hannibal Lecter', 'Hannibal', 'villain', '#a8a29e'],
+  ['tyler-durden', 'Tyler Durden', 'Fight Club', 'villain', '#ec4899'],
+  ['patrick-bateman', 'Patrick Bateman', 'American Psycho', 'villain', '#e5e7eb'],
+  ['john-wick', 'John Wick', 'John Wick', 'villain', '#64748b'],
+  ['punisher', 'The Punisher', 'Marvel', 'villain', '#f8fafc'],
+  ['blade', 'Blade', 'Marvel', 'villain', '#b91c1c'],
+  ['rorschach', 'Rorschach', 'Watchmen', 'villain', '#a16207'],
+  ['batman', 'Batman', 'DC', 'icon', '#facc15'],
+  ['wolverine', 'Wolverine', 'Marvel', 'icon', '#eab308'],
+  ['geralt', 'Geralt of Rivia', 'The Witcher', 'icon', '#cbd5e1'],
+  ['arthur-morgan', 'Arthur Morgan', 'Red Dead Redemption 2', 'icon', '#b45309'],
+  ['jin-sakai', 'Jin Sakai', 'Ghost of Tsushima', 'icon', '#e11d48'],
+  ['agent-47', 'Agent 47', 'Hitman', 'icon', '#dc2626'],
+  ['leon-kennedy', 'Leon Kennedy', 'Resident Evil', 'icon', '#92400e'],
+  ['solid-snake', 'Solid Snake', 'Metal Gear', 'icon', '#4d7c0f'],
+  ['master-chief', 'Master Chief', 'Halo', 'icon', '#65a30d'],
+  ['neo', 'Neo', 'The Matrix', 'icon', '#22c55e'],
+  ['jack-sparrow', 'Jack Sparrow', 'Pirates of the Caribbean', 'icon', '#b45309'],
+  ['thomas-shelby', 'Thomas Shelby', 'Peaky Blinders', 'icon', '#94a3b8'],
+  ['walter-white', 'Walter White', 'Breaking Bad', 'icon', '#16a34a'],
+  ['saul-goodman', 'Saul Goodman', 'Better Call Saul', 'icon', '#eab308'],
+  ['tony-montana', 'Tony Montana', 'Scarface', 'icon', '#f8fafc'],
+  ['sung-jin-woo', 'Sung Jin-Woo', 'Solo Leveling', 'anime', '#8b5cf6'],
+  ['itachi', 'Itachi Uchiha', 'Naruto', 'anime', '#dc2626'],
+  ['madara', 'Madara Uchiha', 'Naruto', 'anime', '#b91c1c'],
+  ['toji', 'Toji Fushiguro', 'Jujutsu Kaisen', 'anime', '#64748b'],
+  ['aizen', 'Aizen', 'Bleach', 'anime', '#a78bfa'],
+  ['hisoka', 'Hisoka', 'Hunter × Hunter', 'anime', '#ec4899'],
+  ['levi', 'Levi', 'Attack on Titan', 'anime', '#15803d'],
+  ['eren', 'Eren Yeager', 'Attack on Titan', 'anime', '#16a34a'],
+  ['danny-devito', 'Danny DeVito', 'Actor', 'wildcard', '#f59e0b'],
+  ['mr-bean', 'Mr. Bean', 'Comedy', 'wildcard', '#a16207'],
+  ['shrek', 'Shrek', 'DreamWorks', 'wildcard', '#84cc16'],
+  ['homer', 'Homer Simpson', 'The Simpsons', 'wildcard', '#facc15'],
+  ['peter-griffin', 'Peter Griffin', 'Family Guy', 'wildcard', '#22c55e'],
+  ['michael-scott', 'Michael Scott', 'The Office', 'wildcard', '#3b82f6'],
+  ['dwight', 'Dwight Schrute', 'The Office', 'wildcard', '#eab308'],
+  ['the-mask', 'The Mask', 'The Mask', 'wildcard', '#65a30d'],
+  ['nicolas-cage', 'Nicolas Cage', 'Actor', 'wildcard', '#f97316'],
+  ['jack-black', 'Jack Black', 'Actor', 'wildcard', '#ef4444'],
+];
+
+interface PersonaImage {
+  id: string;
+  file: string | null;
+  focus?: string;
+  zoom?: number;
+  credit: PersonaCredit | null;
+}
+
+const IMAGE_BY_ID = new Map((personaImages as PersonaImage[]).map((p) => [p.id, p]));
+
+function initials(name: string): string {
+  const words = name.replace(/^(The|Mr\.)\s+/, '').split(/[\s-]+/);
+  return words
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function darken(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (shift: number) => Math.max(0, Math.round(((n >> shift) & 255) * (1 - amount)));
+  return `#${[16, 8, 0].map((s) => ch(s).toString(16).padStart(2, '0')).join('')}`;
+}
+
+export const CHARACTERS: Character[] = ROSTER.map(([id, name, title, group, color]) => {
+  const img = IMAGE_BY_ID.get(id);
+  return {
+    id,
+    name,
+    title,
+    group,
+    image: img?.file ?? null,
+    focus: img?.focus ?? '50% 30%',
+    zoom: img?.zoom ?? 1,
+    credit: img?.credit ?? null,
+    emoji: initials(name),
+    gradient: [darken(color, 0.25), darken(color, 0.7)],
+    ring: color,
+  };
+});
 
 const CHARACTER_BY_ID = new Map(CHARACTERS.map((c) => [c.id, c]));
 

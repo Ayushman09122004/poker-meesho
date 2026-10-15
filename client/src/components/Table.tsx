@@ -1,46 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { ActionBar } from './ActionBar';
-import { WinnerBanner } from './WinnerBanner';
 import { ChatDock } from './Chat';
 import { StatsPanel } from './StatsPanel';
 import { HandHistoryPanel } from './HandHistoryPanel';
 import { HostControlsModal } from './HostControlsModal';
-import { HandHintBadge } from './HandHintBadge';
 import { PokerTable2D } from './PokerTable2D';
-import { leaveRoom, requestRebuy } from '../hooks/useGameConnection';
+import { BettingBar } from './BettingBar';
+import { leaveRoom } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
 import { computeHandHint } from '../lib/handHint';
 
-// Fixed height for the bottom control strip, reserved at all times (even when empty) so the table
-// above it never resizes as your turn comes and goes — sized to fit the tallest real content (hint
-// badge + full bet-slider ActionBar, including the typed-amount input) without wasting more
-// vertical space than necessary. Small screens get the compact ActionBar and a shorter strip so the
-// table (and its cards) keep as much room as possible; short landscape screens (phones held
-// sideways) move the controls into a column beside the table instead.
-const BOTTOM_STRIP_HEIGHT = 250;
-const BOTTOM_STRIP_HEIGHT_COMPACT = 150;
-const SIDE_COLUMN_WIDTH = 290;
-
-type ControlsLayout = 'full' | 'compact' | 'side';
-
-function pickControlsLayout(): ControlsLayout {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  if (h < 520 && w > h * 1.3) return 'side';
-  if (h < 780 || w < 700) return 'compact';
-  return 'full';
-}
-
-function useControlsLayout() {
-  const [layout, setLayout] = useState(pickControlsLayout);
-  useEffect(() => {
-    const onResize = () => setLayout(pickControlsLayout());
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  return layout;
-}
+// Room carpet behind the table, tinted to the table theme.
+const ROOM_TINT: Record<string, string> = {
+  midnight: '#1f3f66',
+  emerald: '#163f30',
+  crimson: '#4a1824',
+  royal: '#2c2152',
+};
 
 export function Table() {
   const snapshot = useGameStore((s) => s.snapshot);
@@ -57,29 +33,35 @@ export function Table() {
   const toggleHostSettings = useGameStore((s) => s.toggleHostSettings);
 
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const controls = useControlsLayout();
-  const compact = controls === 'compact';
-  const side = controls === 'side';
 
   if (!snapshot) return null;
 
   const self = snapshot.players.find((p) => p.id === selfPlayerId);
-  const winnersByPlayer = new Map(snapshot.winnersAnnouncement?.map((w) => [w.playerId, w]) ?? []);
-  const isMyTurn = snapshot.currentTurnPlayerId === selfPlayerId && !!snapshot.legalActionsForViewer;
-  const hint =
-    snapshot.settings.gameMode === 'assisted' ? computeHandHint(self?.holeCards, snapshot.communityCards) : null;
+  const handHint =
+    snapshot.settings.gameMode === 'assisted' && self?.status !== 'folded'
+      ? computeHandHint(self?.holeCards, snapshot.communityCards)
+      : null;
+  const hint = handHint ? { name: handHint.result.rankName, keys: handHint.highlightedKeys } : null;
+  const tint = ROOM_TINT[snapshot.settings.tableTheme] ?? ROOM_TINT.midnight;
 
   return (
     <div
-      className={`w-full h-full relative overflow-hidden flex ${side ? 'flex-row' : 'flex-col'}`}
-      style={{ background: 'radial-gradient(ellipse 90% 75% at 50% 38%, #1a2130 0%, #0b0e15 55%, #040507 100%)' }}
+      className="w-full h-full relative overflow-hidden flex flex-col"
+      style={{ background: `radial-gradient(ellipse 85% 70% at 50% 42%, ${tint} 0%, #0b111b 62%, #05070b 100%)` }}
     >
-      <div className="absolute inset-0 opacity-[0.06] pointer-events-none table-noise" />
-      {/* Table area — a flat 2D table (see PokerTable2D.tsx), laid out in a fixed design space
-          and uniformly scaled to fit. */}
-      <div className="relative flex-1 min-h-0 min-w-0">
+      {/* Carpet pattern */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.07]"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 50% 50%, #fff 0 2px, transparent 3px), radial-gradient(circle at 0 0, transparent 14px, #fff 15px 16px, transparent 17px)',
+          backgroundSize: '36px 36px, 36px 36px',
+        }}
+      />
+
+      <div className="relative flex-1 min-h-0">
         {/* Top bar */}
-        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-3 pointer-events-none">
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2 sm:p-3 pointer-events-none">
           <div className="flex items-center gap-2 pointer-events-auto">
             <div className="bg-black/50 backdrop-blur px-3 py-1.5 rounded-lg text-xs text-slate-300">
               Room <span className="font-display text-gold-light tracking-widest">{snapshot.roomCode}</span>
@@ -88,7 +70,7 @@ export function Table() {
               Hand #{snapshot.handNumber} · Blinds {snapshot.settings.smallBlind}/{snapshot.settings.bigBlind}
             </div>
           </div>
-          <div className="flex items-center gap-2 pointer-events-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
             <IconButton title="Hand history" onClick={() => toggleHandHistory(true)}>
               📜
             </IconButton>
@@ -100,12 +82,7 @@ export function Table() {
                 🛠️
               </IconButton>
             )}
-            <IconButton
-              title={muted ? 'Unmute' : 'Mute'}
-              onClick={() => {
-                setMuted(!muted);
-              }}
-            >
+            <IconButton title={muted ? 'Unmute' : 'Mute'} onClick={() => setMuted(!muted)}>
               {muted ? '🔇' : '🔊'}
             </IconButton>
             <IconButton title="Leave table" onClick={() => setShowLeaveConfirm(true)}>
@@ -114,66 +91,17 @@ export function Table() {
           </div>
         </div>
 
-        <WinnerBanner snapshot={snapshot} />
+        {/* The table, kept clear of the top bar. */}
+        <div className="absolute inset-x-0 bottom-0 top-10">
+          <PokerTable2D snapshot={snapshot} selfPlayerId={selfPlayerId} hint={hint} emotes={emotes} />
+        </div>
 
-        {/* On small screens, keep the top seats clear of the top bar. */}
-        <div className="absolute inset-x-0 bottom-0" style={{ top: compact || side ? 44 : 0 }}>
-          <PokerTable2D
-            snapshot={snapshot}
-            selfPlayerId={selfPlayerId}
-            highlightedKeys={hint?.highlightedKeys}
-            winnersByPlayer={winnersByPlayer}
-            emotes={emotes}
-          />
+        <div className="absolute right-2 sm:right-3 bottom-2 z-20">
+          <ChatDock />
         </div>
       </div>
 
-      {/* Bottom control strip — fixed height, always reserved, so the table above never resizes. */}
-      <div
-        className={`shrink-0 z-20 flex flex-col items-center gap-2 p-3 pointer-events-none overflow-visible ${
-          side ? 'h-full justify-center' : 'w-full justify-end'
-        }`}
-        style={
-          side
-            ? { width: SIDE_COLUMN_WIDTH, padding: 8 }
-            : { height: compact ? BOTTOM_STRIP_HEIGHT_COMPACT : BOTTOM_STRIP_HEIGHT, padding: compact ? 8 : undefined }
-        }
-      >
-        {snapshot.phase === 'hand_in_progress' && <HandHintBadge hint={hint} />}
-        {isMyTurn && snapshot.legalActionsForViewer && self && (
-          <ActionBar
-            snapshot={snapshot}
-            legal={snapshot.legalActionsForViewer}
-            selfChips={self.chips}
-            timeBankMs={self.timeBankMs}
-            variant={controls}
-          />
-        )}
-        {self?.status === 'eliminated' && (
-          <div className="pointer-events-auto bg-ink-900/90 border border-white/10 rounded-xl px-4 py-3 flex items-center gap-3">
-            <span className="text-sm text-slate-300">You're out of chips. Spectating the table.</span>
-            {snapshot.settings.rebuyEnabled && (
-              <button onClick={requestRebuy} className="px-3 py-1.5 rounded-lg bg-gold text-ink-950 text-sm font-semibold hover:brightness-110 transition">
-                Buy back in
-              </button>
-            )}
-          </div>
-        )}
-        {snapshot.phase === 'game_over' && (
-          <div className="pointer-events-auto bg-ink-900/90 border border-gold/30 rounded-xl px-4 py-3 text-center">
-            <p className="text-gold-light font-display font-bold">
-              🏆 {snapshot.players.find((p) => p.chips > 0)?.name ?? 'A player'} takes the whole table!
-            </p>
-            {isHost && <p className="text-xs text-slate-400 mt-1">Open host controls to restart the game.</p>}
-          </div>
-        )}
-      </div>
-
-      {/* On compact screens the action bar spans the full width, so the chat button sits just
-          above the bottom strip instead of on top of the All-in button. */}
-      <div className="absolute right-3 z-20" style={{ bottom: compact ? BOTTOM_STRIP_HEIGHT_COMPACT + 4 : 12 }}>
-        <ChatDock />
-      </div>
+      <BettingBar snapshot={snapshot} self={self} isHost={isHost} />
 
       {showStats && <StatsPanel snapshot={snapshot} selfPlayerId={selfPlayerId} onClose={() => toggleStats(false)} />}
       {showHandHistory && <HandHistoryPanel snapshot={snapshot} onClose={() => toggleHandHistory(false)} />}
@@ -206,7 +134,7 @@ function IconButton({ children, onClick, title }: { children: React.ReactNode; o
         sound.uiClick();
         onClick();
       }}
-      className="w-9 h-9 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-base hover:bg-black/70 transition"
+      className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-sm sm:text-base hover:bg-black/70 transition"
     >
       {children}
     </button>

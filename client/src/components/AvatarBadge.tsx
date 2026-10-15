@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { getAvatar } from '../lib/avatar';
 
@@ -7,9 +7,9 @@ interface AvatarBadgeProps {
   size?: number;
   ring?: 'gold' | 'gray' | 'none';
   dimmed?: boolean;
-  /** Plays a subtle continuous idle bob + 3D tilt — only worth it for seated, in-play avatars. */
+  /** Kept for API compatibility; portraits no longer bob. */
   animated?: boolean;
-  /** Bump this number (e.g. on every new lastAction) to replay a one-shot "playing a card" gesture. */
+  /** Bump this number (e.g. on every new lastAction) to replay a one-shot "reacting" pulse. */
   gesturePulse?: number;
 }
 
@@ -22,106 +22,74 @@ function hashString(s: string): number {
   return Math.abs(h);
 }
 
-// A glossy, faux-3D "token" look: a colored bezel ring (per-character accent), a radial highlight
-// standing in for a light source, and a soft contact shadow underneath. Combined with a gentle
-// perspective tilt, this reads as a 3D object without pulling in a WebGL/Three.js dependency —
-// which would meaningfully bloat the bundle and add render risk for a free-tier deploy, for a
-// gain (true 3D geometry on an emoji glyph) the player would barely notice at avatar size.
-/** A seated body/torso silhouette in the character's own colors — rendered behind the head badge
- * so the avatar reads as a person sitting at the table instead of a floating orb. */
-export function AvatarBody({ seed, width }: { seed: string; width: number }) {
-  const { gradient, ring: accentColor } = getAvatar(seed);
-  const height = width * 0.62;
-  return (
-    <div
-      className="pointer-events-none"
-      style={{
-        width,
-        height,
-        borderRadius: '46% 46% 8% 8% / 78% 78% 8% 8%',
-        background: `linear-gradient(180deg, ${accentColor} 0%, ${gradient[1]} 85%)`,
-        boxShadow: 'inset 0 8px 12px rgba(255,255,255,0.18), inset 0 -10px 16px rgba(0,0,0,0.35), 0 6px 14px rgba(0,0,0,0.4)',
-      }}
-    />
-  );
-}
-
 /** ~1 in 3 characters "keep a drink at the table" — a small deterministic, decorative-only prop. */
 export function hasDrinkProp(seed: string): boolean {
   return hashString(seed) % 3 === 0;
 }
 
-export function AvatarBadge({ seed, size = 44, ring = 'none', dimmed, animated, gesturePulse }: AvatarBadgeProps) {
-  const { emoji, gradient, ring: accentColor } = getAvatar(seed);
-  const ringClass = ring === 'gold' ? 'ring-2 ring-gold shadow-glow' : ring === 'gray' ? 'ring-2 ring-white/20' : '';
-  // Vary each avatar's idle timing/phase by its seed so a table full of animated avatars doesn't
-  // sway/tilt in unison like a synchronized dance line.
-  const seedHash = hashString(seed);
-  const bobDuration = 2.6 + (seedHash % 8) / 5;
-  const bobDelay = (seedHash % 10) / 10;
-  const tiltDir = seedHash % 2 === 0 ? 1 : -1;
-
-  // Memoized so a busy parent re-rendering mid-loop (e.g. on every snapshot broadcast) doesn't
-  // hand Framer Motion "new" animate/transition objects and restart the infinite bob from scratch
-  // each time — same class of bug as the card-dealing animation getting stuck (see PlayingCard).
-  const idleAnimate = useMemo(
-    () =>
-      animated
-        ? { y: [0, -size * 0.06, 0], rotateY: [tiltDir * -9, tiltDir * 9, tiltDir * -9], rotateX: [3, -3, 3] }
-        : undefined,
-    [animated, size, tiltDir]
-  );
-  const idleTransition = useMemo(
-    () => (animated ? { duration: bobDuration, delay: bobDelay, repeat: Infinity, ease: 'easeInOut' as const } : undefined),
-    [animated, bobDuration, bobDelay]
-  );
-
+/** A seated torso silhouette in the character's colours (used by the legacy 3D scene). */
+export function AvatarBody({ seed, width }: { seed: string; width: number }) {
+  const { gradient, ring: accentColor } = getAvatar(seed);
   return (
     <div
-      className={`relative shrink-0 select-none rounded-full ${ringClass} ${dimmed ? 'opacity-40 grayscale' : ''}`}
-      style={{ width: size, height: size, perspective: size * 8 }}
+      className="pointer-events-none"
+      style={{
+        width,
+        height: width * 0.62,
+        borderRadius: '46% 46% 8% 8% / 78% 78% 8% 8%',
+        background: `linear-gradient(180deg, ${accentColor} 0%, ${gradient[1]} 85%)`,
+      }}
+    />
+  );
+}
+
+/** The portrait inside a circle: the persona photo cropped onto the face, or an initials badge. */
+export function PersonaPortrait({ seed, size }: { seed: string; size: number }) {
+  const { image, focus, zoom, gradient, emoji } = getAvatar(seed);
+  const [failed, setFailed] = useState(false);
+  if (image && !failed) {
+    return (
+      <img
+        src={image}
+        alt=""
+        draggable={false}
+        onError={() => setFailed(true)}
+        className="w-full h-full object-cover select-none"
+        style={{ objectPosition: focus, transform: `scale(${zoom})`, transformOrigin: focus }}
+      />
+    );
+  }
+  return (
+    <div
+      className="w-full h-full flex items-center justify-center font-display font-extrabold text-white/90"
+      style={{ background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`, fontSize: size * 0.36 }}
     >
-      {animated && (
-        <div
-          className="absolute left-1/2 rounded-[50%] bg-black/45 blur-[3px]"
-          style={{ width: size * 0.7, height: size * 0.16, top: size * 0.94, transform: 'translateX(-50%)' }}
-        />
-      )}
-      <motion.div
-        className="relative w-full h-full rounded-full"
-        style={{ transformStyle: 'preserve-3d' }}
-        animate={idleAnimate}
-        transition={idleTransition}
-      >
-        {/* Bezel ring — the character's own accent color, like a poker-chip rim */}
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{
-            background: accentColor,
-            boxShadow: `0 ${Math.max(2, size * 0.05)}px ${size * 0.22}px rgba(0,0,0,0.45)`,
-          }}
-        />
-        <motion.div
-          key={gesturePulse ?? 0}
-          className="absolute rounded-full flex items-center justify-center overflow-hidden"
-          style={{
-            inset: Math.max(1.5, size * 0.06),
-            background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
-            fontSize: size * 0.5,
-            boxShadow: `inset -${size * 0.06}px -${size * 0.08}px ${size * 0.18}px rgba(0,0,0,0.4), inset ${size * 0.04}px ${size * 0.05}px ${size * 0.12}px rgba(255,255,255,0.3)`,
-          }}
-          initial={false}
-          animate={gesturePulse ? { scale: [1, 1.18, 0.96, 1], rotate: [0, -10, 8, 0] } : { scale: 1, rotate: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-        >
-          {/* Specular highlight — sells the glossy-sphere illusion */}
-          <div
-            className="absolute rounded-full bg-white/40 blur-[2px] pointer-events-none"
-            style={{ width: size * 0.32, height: size * 0.2, top: size * 0.1, left: size * 0.14 }}
-          />
-          <span className="relative">{emoji}</span>
-        </motion.div>
-      </motion.div>
+      {emoji}
     </div>
+  );
+}
+
+export function AvatarBadge({ seed, size = 44, ring = 'none', dimmed, gesturePulse }: AvatarBadgeProps) {
+  const { ring: accentColor } = getAvatar(seed);
+  const bezel = Math.max(2, Math.round(size * 0.06));
+  return (
+    <motion.div
+      key={gesturePulse ?? 0}
+      initial={false}
+      animate={gesturePulse ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+      transition={{ duration: 0.4 }}
+      className={`relative shrink-0 select-none rounded-full ${dimmed ? 'opacity-45 grayscale' : ''}`}
+      style={{
+        width: size,
+        height: size,
+        padding: bezel,
+        background: ring === 'gold' ? 'linear-gradient(135deg,#f5d78a,#a97e2b)' : ring === 'gray' ? '#475569' : `linear-gradient(135deg, ${accentColor}, #0b0e15)`,
+        boxShadow: `0 ${Math.max(2, size * 0.06)}px ${size * 0.25}px rgba(0,0,0,0.55)${ring === 'gold' ? ', 0 0 22px rgba(227,182,79,0.6)' : ''}`,
+      }}
+    >
+      <div className="w-full h-full rounded-full overflow-hidden bg-ink-900">
+        <PersonaPortrait seed={seed} size={size} />
+      </div>
+    </motion.div>
   );
 }

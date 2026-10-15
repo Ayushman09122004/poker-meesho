@@ -153,6 +153,11 @@ export interface GameStateSnapshot {
    * (hand went to a real showdown, or is still in progress).
    */
   revealedRunoutFrom: number | null;
+  /**
+   * Index into communityCards where cards dealt in one go because everyone left was all-in start
+   * (these DO count). The client shows them one by one for drama. Null if no such run-out happened.
+   */
+  allInRunoutFrom: number | null;
 }
 
 export interface WinnerAnnouncement {

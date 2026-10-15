@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import { ChatMessage, RoomSettings } from '../../../shared/types';
 import { ServerEvents } from '../../../shared/events';
+import { runoutCardCount, showdownTimeline } from '../../../shared/showdownTiming';
 import { PokerEngine } from './PokerEngine';
 import { generateId } from '../utils/rng';
 
@@ -163,7 +164,19 @@ export class Room {
       this.engine.startHand();
       this.systemChat(`Hand #${this.engine.handNumber} started.`);
       this.afterEngineMutation();
-    }, NEXT_HAND_DELAY_MS);
+    }, this.nextHandDelayMs());
+  }
+
+  /** Long enough for clients to play the whole end-of-hand sequence (see shared/showdownTiming). */
+  private nextHandDelayMs(): number {
+    const snap = this.engine.getSnapshot();
+    if (!snap.winnersAnnouncement || snap.winnersAnnouncement.length === 0) return NEXT_HAND_DELAY_MS;
+    const timeline = showdownTimeline({
+      runoutCards: runoutCardCount(snap),
+      revealCount: snap.showdown?.length ?? 0,
+      contested: (snap.showdown?.length ?? 0) > 1,
+    });
+    return timeline.nextHandAt + 400;
   }
 
   destroy(): void {

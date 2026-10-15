@@ -50,6 +50,7 @@ export class PokerEngine {
   lastWinners: WinnerAnnouncement[] | null = null;
   handHistory: HandHistoryEntry[] = [];
   revealedRunoutFrom: number | null = null;
+  allInRunoutFrom: number | null = null;
 
   constructor(roomCode: string, settings: RoomSettings) {
     this.roomCode = roomCode;
@@ -165,6 +166,7 @@ export class PokerEngine {
     this.lastWinners = null;
     this.handHistory = [];
     this.revealedRunoutFrom = null;
+    this.allInRunoutFrom = null;
     this.currentTurnPlayerId = null;
     this.turnExpiresAt = null;
     for (const p of this.players.values()) {
@@ -260,6 +262,7 @@ export class PokerEngine {
     this.lastShowdown = null;
     this.lastWinners = null;
     this.revealedRunoutFrom = null;
+    this.allInRunoutFrom = null;
 
     // Post blinds
     this.postBlind(this.playerAtSeat(this.sbSeat)!, this.settings.smallBlind);
@@ -527,6 +530,7 @@ export class PokerEngine {
     if (canStillAct.length <= 1) {
       // No more betting possible: run the board out completely, then showdown.
       this.setCurrentTurn(null);
+      if (this.street !== 'river') this.allInRunoutFrom = this.communityCards.length;
       while (this.street !== 'river') {
         this.dealNextStreetCards();
       }
@@ -833,6 +837,7 @@ export class PokerEngine {
       legalActionsForViewer: viewerId ? this.getLegalActions(viewerId) : null,
       handHistory: this.handHistory,
       revealedRunoutFrom: this.revealedRunoutFrom,
+      allInRunoutFrom: this.allInRunoutFrom,
     };
   }
 

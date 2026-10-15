@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AvatarPicker } from './AvatarPicker';
+import { AvatarPicker, PersonaCredits } from './AvatarPicker';
+import { AvatarBadge } from './AvatarBadge';
+import { getAvatar } from '../lib/avatar';
 import { SettingsForm } from './SettingsForm';
 import { createRoom, joinRoom } from '../hooks/useGameConnection';
 import { getSavedAvatarSeed, getSavedName, saveAvatarSeed, saveName } from '../lib/storage';
@@ -16,6 +18,8 @@ export function Landing() {
   const [settings, setSettings] = useState<Partial<RoomSettings>>(defaultClientSettings());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCredits, setShowCredits] = useState(false);
+  const persona = getAvatar(avatarSeed);
   const pushToast = useGameStore((s) => s.pushToast);
 
   function persistIdentity() {
@@ -60,12 +64,15 @@ export function Landing() {
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-felt-radial [--felt-light:#125c44] [--felt-dark:#062a20] px-4 overflow-y-auto py-8">
+    // `m-auto` on the card (instead of items-center on the container) centres it when it fits but
+    // lets it start at the top and scroll when it's taller than the screen — centring an overflowing
+    // flex child pushes its top (the name field) out of reach.
+    <div className="w-full h-full flex bg-felt-radial [--felt-light:#125c44] [--felt-dark:#062a20] px-3 sm:px-4 overflow-y-auto py-4 sm:py-8">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="w-full max-w-lg bg-ink-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-card p-6 sm:p-8"
+        className={`m-auto w-full ${mode === 'menu' ? 'max-w-lg' : 'max-w-2xl'} bg-ink-900/90 backdrop-blur border border-white/10 rounded-2xl shadow-card p-4 sm:p-8`}
       >
         <div className="text-center mb-6">
           <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-gold-light tracking-tight">
@@ -93,24 +100,41 @@ export function Landing() {
 
         {(mode === 'create' || mode === 'join') && (
           <div className="flex flex-col gap-5">
-            <div>
-              <label className="text-slate-400 text-xs uppercase tracking-wide">Your name</label>
-              <input
-                autoFocus
-                maxLength={20}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onFocus={(e) => e.target.select()}
-                placeholder="e.g. Alex"
-                className="w-full mt-1 bg-ink-800 border border-white/10 rounded-lg px-3 py-2 text-slate-100 outline-none focus:border-gold/60"
-              />
+            <div className="flex items-center gap-4">
+              <div className="text-center shrink-0">
+                <AvatarBadge seed={avatarSeed} size={76} />
+                <p className="text-[11px] text-slate-400 mt-1 max-w-[84px] truncate">{persona.name}</p>
+              </div>
+              <div className="flex-1 min-w-0">
+                <label htmlFor="player-name" className="text-slate-300 text-xs uppercase tracking-wide font-semibold">
+                  Your name
+                </label>
+                <input
+                  id="player-name"
+                  autoFocus
+                  maxLength={20}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setError(null);
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  placeholder="Type your name…"
+                  className={`w-full mt-1 bg-ink-800 border-2 rounded-xl px-4 py-3 text-lg text-slate-100 placeholder:text-slate-500 outline-none focus:border-gold transition-colors ${
+                    error && !name.trim() ? 'border-rose-500' : 'border-gold/40'
+                  }`}
+                />
+              </div>
             </div>
 
             <div>
-              <label className="text-slate-400 text-xs uppercase tracking-wide">Pick an avatar</label>
-              <div className="mt-1">
-                <AvatarPicker value={avatarSeed} onChange={setAvatarSeed} />
+              <div className="flex items-baseline justify-between mb-1.5">
+                <label className="text-slate-300 text-xs uppercase tracking-wide font-semibold">Choose your persona</label>
+                <button type="button" onClick={() => setShowCredits(true)} className="text-[10px] text-slate-500 hover:text-slate-300 underline">
+                  Photo credits
+                </button>
               </div>
+              <AvatarPicker value={avatarSeed} onChange={setAvatarSeed} />
             </div>
 
             {mode === 'join' && (
@@ -157,6 +181,7 @@ export function Landing() {
           For entertainment only. No real money, no gambling, no purchasable or redeemable chips.
         </p>
       </motion.div>
+      {showCredits && <PersonaCredits onClose={() => setShowCredits(false)} />}
     </div>
   );
 }
