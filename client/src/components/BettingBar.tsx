@@ -39,26 +39,34 @@ export function BettingBar({ snapshot, self, isHost }: BettingBarProps) {
     if (!isMyTurn) setRaiseOpen(false);
   }, [isMyTurn]);
 
-  // Fire a ticked pre-action as soon as the turn arrives.
+  // Fire a ticked pre-action as soon as the turn arrives. The move is sent from a timer that is
+  // NOT tied to this effect's cleanup — clearing the tick re-renders the bar, and cancelling the
+  // timer on that re-render is exactly what used to swallow the move.
   const firedFor = useRef<string | null>(null);
+  const preTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (preTimer.current) clearTimeout(preTimer.current);
+  }, []);
   useEffect(() => {
     if (!isMyTurn || !legal || !pre) return;
     const turnKey = `${snapshot.handNumber}-${snapshot.street}-${snapshot.currentBet}`;
     if (firedFor.current === turnKey) return;
     firedFor.current = turnKey;
     const choice = pre;
-    setPre(null);
-    const t = setTimeout(() => {
-      if (choice === 'check_fold') sendPlayerAction(legal.canCheck ? 'check' : 'fold');
+    const l = legal;
+    preTimer.current = setTimeout(() => {
+      preTimer.current = null;
+      setPre(null);
+      if (choice === 'check_fold') sendPlayerAction(l.canCheck ? 'check' : 'fold');
       else if (choice === 'check') {
-        if (legal.canCheck) sendPlayerAction('check');
+        // "Check" only holds if nobody bet in the meantime; otherwise you decide yourself.
+        if (l.canCheck) sendPlayerAction('check');
       } else if (choice === 'call_any') {
-        if (legal.canCheck) sendPlayerAction('check');
-        else if (legal.canCall) sendPlayerAction('call');
-        else if (legal.canAllIn) sendPlayerAction('all_in');
+        if (l.canCheck) sendPlayerAction('check');
+        else if (l.canCall) sendPlayerAction('call');
+        else if (l.canAllIn) sendPlayerAction('all_in');
       }
     }, 350);
-    return () => clearTimeout(t);
   }, [isMyTurn, legal, pre, snapshot.handNumber, snapshot.street, snapshot.currentBet]);
 
   return (
