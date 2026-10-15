@@ -128,6 +128,14 @@ export function kickPlayer(targetPlayerId: string): void {
   socket.emit(ClientEvents.KickPlayer, { targetPlayerId });
 }
 
+export function addBot(name: string, avatarSeed: string, level: number): void {
+  socket.emit(ClientEvents.AddBot, { name, avatarSeed, level });
+}
+
+export function setBotLevel(targetPlayerId: string, level: number): void {
+  socket.emit(ClientEvents.SetBotLevel, { targetPlayerId, level });
+}
+
 export function requestRebuy(): void {
   socket.emit(ClientEvents.Rebuy);
 }

@@ -4,6 +4,7 @@ import { ServerEvents } from '../../../shared/events';
 import { runoutCardCount, showdownTimeline } from '../../../shared/showdownTiming';
 import { PokerEngine } from './PokerEngine';
 import { generateId } from '../utils/rng';
+import { botThinkMs, decideBotAction } from './BotBrain';
 
 const NEXT_HAND_DELAY_MS = 4500;
 const CHAT_HISTORY_LIMIT = 100;
@@ -21,6 +22,7 @@ export class Room {
   chat: ChatMessage[] = [];
   private turnTimer: ReturnType<typeof setTimeout> | null = null;
   private nextHandTimer: ReturnType<typeof setTimeout> | null = null;
+  private botTimer: ReturnType<typeof setTimeout> | null = null;
   lastActivityAt = Date.now();
 
   constructor(code: string, settings: RoomSettings, io: Server) {
@@ -75,8 +77,13 @@ export class Room {
     return s || undefined;
   }
 
+  /** A room with no humans left is empty — bots alone never keep a room alive. */
   isEmpty(): boolean {
-    return this.engine.players.size === 0;
+    return ![...this.engine.players.values()].some((p) => !p.isBot);
+  }
+
+  private hasConnectedHuman(): boolean {
+    return [...this.engine.players.values()].some((p) => !p.isBot && p.isConnected);
   }
 
   removeReconnectData(playerId: string): void {
@@ -100,6 +107,8 @@ export class Room {
       this.io.to(socketId).emit(ServerEvents.StateUpdate, snapshot);
     }
     this.scheduleTurnTimer();
+    // e.g. a human reconnecting while a bot was waiting to act.
+    if (!this.botTimer) this.scheduleBotTurn();
   }
 
   broadcastChat(message: ChatMessage): void {
@@ -153,6 +162,52 @@ export class Room {
     if (this.engine.phase === 'between_hands' || this.engine.phase === 'game_over') {
       this.scheduleNextHand();
     }
+    this.scheduleBotTurn();
+  }
+
+  // ---------- Bots ----------
+
+  /**
+   * If it's a bot's turn, act after a short human-like "think". The bot goes through the same
+   * applyAction path as a person, so it can only ever make legal moves; if anything about the
+   * turn changed while it was thinking, it does nothing (the next mutation reschedules).
+   */
+  private scheduleBotTurn(): void {
+    if (this.botTimer) {
+      clearTimeout(this.botTimer);
+      this.botTimer = null;
+    }
+    const turnId = this.engine.currentTurnPlayerId;
+    const bot = turnId ? this.engine.players.get(turnId) : undefined;
+    if (!bot || !bot.isBot || this.engine.phase !== 'hand_in_progress') return;
+    // Nobody watching: let the normal turn timer move things along slowly instead.
+    if (!this.hasConnectedHuman()) return;
+
+    const turnKey = `${this.engine.handNumber}|${this.engine.street}|${this.engine.currentBet}|${turnId}`;
+    this.botTimer = setTimeout(() => {
+      this.botTimer = null;
+      const nowKey = `${this.engine.handNumber}|${this.engine.street}|${this.engine.currentBet}|${this.engine.currentTurnPlayerId}`;
+      if (nowKey !== turnKey) return;
+      let result: { ok: boolean };
+      try {
+        const decision = decideBotAction(this.engine, bot);
+        result = this.engine.applyAction(bot.id, decision.action, decision.amount);
+      } catch {
+        result = { ok: false };
+      }
+      // Belt and braces: a rejected move falls back to check/fold so the game never stalls.
+      if (!result.ok) this.engine.forceTimeoutAction(bot.id);
+      this.touch();
+      this.afterEngineMutation();
+    }, botThinkMs(this.engine, bot));
+  }
+
+  /** Busted bots buy back in between hands when rebuys are on, so the table stays full. */
+  private rebuyBots(): void {
+    if (!this.engine.settings.rebuyEnabled) return;
+    for (const p of this.engine.players.values()) {
+      if (p.isBot && p.chips <= 0 && this.engine.rebuy(p.id).ok) this.systemChat(`🤖 ${p.name} bought back in.`);
+    }
   }
 
   private scheduleNextHand(): void {
@@ -160,6 +215,7 @@ export class Room {
     if (this.engine.phase === 'game_over') return;
     this.nextHandTimer = setTimeout(() => {
       if (this.engine.phase !== 'between_hands') return;
+      this.rebuyBots();
       if (!this.engine.canStartHand()) return;
       this.engine.startHand();
       this.systemChat(`Hand #${this.engine.handNumber} started.`);
@@ -183,5 +239,6 @@ export class Room {
   destroy(): void {
     this.clearTurnTimer();
     if (this.nextHandTimer) clearTimeout(this.nextHandTimer);
+    if (this.botTimer) clearTimeout(this.botTimer);
   }
 }

@@ -19,6 +19,10 @@ export interface EnginePlayer {
   stats: PlayerStats;
   /** true once the player has folded or gone all-in this hand, used to know who's "in" the hand */
   isInHand: boolean;
+  /** Computer-controlled seat (see BotBrain). */
+  isBot: boolean;
+  /** Bot difficulty, 1 (easiest) to 5 (hardest); 0 for humans. */
+  botLevel: number;
 }
 
 export interface InternalPot {

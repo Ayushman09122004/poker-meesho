@@ -15,6 +15,7 @@ import { fxForSeed, FxKind } from '../lib/characterFx';
 import { WinFx, FxEvent, FX_DURATION_MS } from './WinFx';
 import { BigMoments, computeMoments } from './BigMoments';
 import { sound } from '../lib/sound';
+import { botLevelInfo } from './BotControls';
 
 // Signature moves heavy enough to shake the table.
 const SHAKY = new Set<FxKind>(['rage', 'boom', 'bullets', 'lightning']);
@@ -652,6 +653,11 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote }: SeatPod
           >
             <p className="text-[14px] font-semibold text-white truncate leading-tight">
               {p.isHost && <span className="mr-1">👑</span>}
+              {p.isBot && (
+                <span className="mr-1" title={`Bot · ${botLevelInfo(p.botLevel).name}`}>
+                  🤖
+                </span>
+              )}
               {p.name}
             </p>
             <p className="text-[14px] font-display font-bold text-gold-light leading-tight">

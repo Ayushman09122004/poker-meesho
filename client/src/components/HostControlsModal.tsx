@@ -4,6 +4,7 @@ import { GameStateSnapshot } from '../../../shared/types';
 import { AvatarBadge } from './AvatarBadge';
 import { kickPlayer, restartGame, updateSettings } from '../hooks/useGameConnection';
 import { THEMES } from './SettingsForm';
+import { AddBotButton, BotLevelSelect } from './BotControls';
 
 interface HostControlsModalProps {
   snapshot: GameStateSnapshot;
@@ -28,15 +29,25 @@ export function HostControlsModal({ snapshot, onClose }: HostControlsModalProps)
           </button>
         </div>
 
-        <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Players</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-slate-500 uppercase tracking-wide">Players</p>
+          <AddBotButton players={snapshot.players} maxPlayers={snapshot.settings.maxPlayers} className="!py-1 text-xs" />
+        </div>
         <div className="flex flex-col gap-2 mb-5 max-h-56 overflow-y-auto">
           {snapshot.players.map((p) => (
             <div key={p.id} className="flex items-center justify-between bg-ink-800 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
                 <AvatarBadge seed={p.avatarSeed} size={28} dimmed={!p.isConnected} />
                 <div>
-                  <p className="text-sm">{p.name}</p>
-                  <p className="text-[11px] text-slate-500">{p.isConnected ? 'Connected' : 'Disconnected'}</p>
+                  <p className="text-sm">
+                    {p.isBot && '🤖 '}
+                    {p.name}
+                  </p>
+                  {p.isBot ? (
+                    <BotLevelSelect player={p} />
+                  ) : (
+                    <p className="text-[11px] text-slate-500">{p.isConnected ? 'Connected' : 'Disconnected'}</p>
+                  )}
                 </div>
               </div>
               {p.id !== snapshot.hostId && (

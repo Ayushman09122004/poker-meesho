@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
 import { AvatarBadge } from './AvatarBadge';
-import { leaveRoom, setReady, startGame, updateSettings } from '../hooks/useGameConnection';
+import { kickPlayer, leaveRoom, setReady, startGame, updateSettings } from '../hooks/useGameConnection';
+import { AddBotButton, BotLevelSelect, botLevelInfo } from './BotControls';
 import { SettingsForm } from './SettingsForm';
 import { ChatDock } from './Chat';
 import { sound } from '../lib/sound';
@@ -47,7 +48,8 @@ export function Lobby() {
               {snapshot.roomCode}
             </button>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {isHost && <AddBotButton players={snapshot.players} maxPlayers={snapshot.settings.maxPlayers} />}
             <button onClick={copyLink} className="px-3 py-2 rounded-lg bg-ink-800 border border-white/10 text-sm text-slate-200 hover:bg-ink-700 transition">
               {copied ? 'Copied!' : 'Copy invite link'}
             </button>
@@ -69,15 +71,35 @@ export function Lobby() {
               }`}
             >
               <AvatarBadge seed={p.avatarSeed} size={36} ring={p.isConnected ? 'none' : 'gray'} dimmed={!p.isConnected} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                  {p.isBot && <span title="Computer player">🤖</span>}
                   {p.name}
                   {p.isHost && <span title="Host">👑</span>}
                 </p>
-                <p className={`text-xs ${p.isReady ? 'text-emerald-400' : 'text-slate-500'}`}>
-                  {!p.isConnected ? 'Disconnected' : p.isReady ? 'Ready' : 'Not ready'}
-                </p>
+                {p.isBot ? (
+                  isHost ? (
+                    <BotLevelSelect player={p} />
+                  ) : (
+                    <p className="text-xs text-sky-300">
+                      {botLevelInfo(p.botLevel).icon} {botLevelInfo(p.botLevel).name}
+                    </p>
+                  )
+                ) : (
+                  <p className={`text-xs ${p.isReady ? 'text-emerald-400' : 'text-slate-500'}`}>
+                    {!p.isConnected ? 'Disconnected' : p.isReady ? 'Ready' : 'Not ready'}
+                  </p>
+                )}
               </div>
+              {p.isBot && isHost && (
+                <button
+                  onClick={() => kickPlayer(p.id)}
+                  title="Remove bot"
+                  className="shrink-0 w-6 h-6 rounded-full bg-ink-800 border border-white/10 text-slate-400 hover:text-rose-300 hover:border-rose-400/50 text-sm leading-none"
+                >
+                  ×
+                </button>
+              )}
             </motion.div>
           ))}
           {Array.from({ length: Math.max(0, snapshot.settings.maxPlayers - snapshot.players.length) }).map((_, i) => (
@@ -131,7 +153,11 @@ export function Lobby() {
             </button>
           )}
         </div>
-        {!canStart && <p className="text-center text-xs text-slate-500 mt-3">Waiting for at least 2 players…</p>}
+        {!canStart && (
+          <p className="text-center text-xs text-slate-500 mt-3">
+            Waiting for at least 2 players…{isHost && ' or add a 🤖 bot to play right away.'}
+          </p>
+        )}
       </motion.div>
 
       <div className="w-full max-w-2xl mt-4">

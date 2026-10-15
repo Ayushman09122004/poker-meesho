@@ -75,7 +75,7 @@ export class PokerEngine {
     return null;
   }
 
-  addPlayer(id: string, name: string, avatarSeed: string, isHost: boolean): { ok: boolean; error?: string } {
+  addPlayer(id: string, name: string, avatarSeed: string, isHost: boolean, bot?: { level: number }): { ok: boolean; error?: string } {
     if (this.players.has(id)) return { ok: true };
     if (this.players.size >= this.settings.maxPlayers) return { ok: false, error: 'Room is full' };
     const seatIndex = this.firstOpenSeat();
@@ -93,12 +93,15 @@ export class PokerEngine {
       status: 'waiting',
       isHost,
       isConnected: true,
-      isReady: false,
+      // Bots are always ready to play.
+      isReady: !!bot,
       lastAction: null,
       hasActedThisRound: false,
       timeBankMs: TIME_BANK_TOTAL_MS,
       stats: emptyStats(),
       isInHand: false,
+      isBot: !!bot,
+      botLevel: bot ? bot.level : 0,
     };
     this.players.set(id, player);
     if (isHost) this.hostId = id;
@@ -115,7 +118,8 @@ export class PokerEngine {
     }
     this.players.delete(id);
     if (this.hostId === id) {
-      const next = [...this.players.values()][0];
+      // Hosting passes to a human — never to a bot.
+      const next = [...this.players.values()].find((p) => !p.isBot);
       this.hostId = next ? next.id : null;
       if (next) next.isHost = true;
     }
@@ -802,6 +806,8 @@ export class PokerEngine {
         isHost: p.isHost,
         hasCards: p.holeCards.length > 0 && p.isInHand,
         isConnected: p.isConnected,
+        isBot: p.isBot,
+        botLevel: p.botLevel,
         isReady: p.isReady,
         lastAction: p.lastAction,
         holeCards: revealToViewer ? p.holeCards : null,

@@ -12,6 +12,7 @@ import { ClientEvents, ServerEvents } from '../../../shared/events';
 import { RoomManager } from '../game/RoomManager';
 import { sanitizeSettings } from '../game/settings';
 import { generateId } from '../utils/rng';
+import { BOT_LEVEL_NAMES } from '../game/BotBrain';
 
 interface SocketData {
   roomCode?: string;
@@ -21,6 +22,11 @@ interface SocketData {
 function cleanName(name: unknown): string {
   const s = String(name ?? '').trim().slice(0, 20);
   return s.length > 0 ? s : 'Player';
+}
+
+function clampBotLevel(level: unknown): number {
+  const n = Math.round(Number(level));
+  return Number.isFinite(n) ? Math.min(5, Math.max(1, n)) : 3;
 }
 
 function cleanAvatarSeed(seed: unknown): string {
@@ -217,6 +223,36 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
         io.sockets.sockets.get(targetSocketId)?.leave(room.code);
       }
       room.afterEngineMutation();
+    });
+
+    socket.on(ClientEvents.AddBot, (payload: { name?: string; avatarSeed?: string; level?: number }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      if (room.engine.hostId !== data.playerId) {
+        socket.emit(ServerEvents.RoomError, { message: 'Only the host can add bots' });
+        return;
+      }
+      const level = clampBotLevel(payload?.level);
+      const name = cleanName(payload?.name || 'Bot');
+      const add = room.engine.addPlayer(generateId(10), name, cleanAvatarSeed(payload?.avatarSeed), false, { level });
+      if (!add.ok) {
+        socket.emit(ServerEvents.RoomError, { message: add.error ?? 'Could not add bot' });
+        return;
+      }
+      room.touch();
+      room.systemChat(`🤖 ${name} (${BOT_LEVEL_NAMES[level]}) sat down.`);
+      room.afterEngineMutation();
+    });
+
+    socket.on(ClientEvents.SetBotLevel, (payload: { targetPlayerId?: string; level?: number }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      if (room.engine.hostId !== data.playerId) return;
+      const bot = room.engine.players.get(String(payload?.targetPlayerId ?? ''));
+      if (!bot || !bot.isBot) return;
+      bot.botLevel = clampBotLevel(payload?.level);
+      room.touch();
+      room.broadcastState();
     });
 
     socket.on(ClientEvents.Rebuy, () => {

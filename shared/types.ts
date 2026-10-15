@@ -60,6 +60,10 @@ export interface PublicPlayer {
   hasCards: boolean;
   isConnected: boolean;
   isReady: boolean;
+  /** Computer-controlled player. */
+  isBot: boolean;
+  /** Bot difficulty 1–5 (0 for humans). */
+  botLevel: number;
   lastAction: PlayerAction | null;
   holeCards: Card[] | null; // only populated for the requesting player, or at showdown
   timeBankMs: number;
