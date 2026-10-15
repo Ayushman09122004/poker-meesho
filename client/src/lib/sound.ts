@@ -172,6 +172,24 @@ class SoundManager {
       gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.4);
       setTimeout(() => audio.pause(), 450);
     }, maxMs);
+    return audio;
+  }
+
+  /** Plays one voice clip after another (e.g. two rivals), each starting when the last one ends. */
+  playVoicesInTurn(clips: { url: string; gain?: number; start?: number; length?: number }[]) {
+    const [first, ...rest] = clips;
+    if (!first) return;
+    const audio = this.playVoice(first);
+    if (!audio || rest.length === 0) return;
+    let done = false;
+    const next = () => {
+      if (done || this.voice !== audio) return; // something else took over the voice channel
+      done = true;
+      this.playVoicesInTurn(rest);
+    };
+    audio.addEventListener('ended', next, { once: true });
+    // If the clip is longer than its cap it never "ends" — move on when it's faded out instead.
+    setTimeout(next, (first.length ?? 4.5) * 1000 + 450);
   }
 
   stopVoice() {
@@ -180,6 +198,28 @@ class SoundManager {
     if (this.voice) {
       this.voice.pause();
       this.voice = null;
+    }
+  }
+
+  /** Throwables: a quick whoosh as the item flies… */
+  throwWhoosh() {
+    this.noiseBurst(0.35, { bandpassFreq: 1800, gain: 0.18 });
+  }
+
+  /** …and the landing, per item. */
+  splat(item: string) {
+    if (item === 'tomato') {
+      this.noiseBurst(0.22, { bandpassFreq: 500, gain: 0.45 });
+      this.tone(160, 0.18, { type: 'sine', gain: 0.25, slideTo: 60 });
+    } else if (item === 'rose') {
+      [880, 1175, 1568].forEach((f, i) => this.tone(f, 0.3, { type: 'sine', gain: 0.1, delay: i * 0.08 }));
+    } else if (item === 'beer') {
+      this.noiseBurst(0.4, { bandpassFreq: 3000, gain: 0.25 });
+      this.tone(1300, 0.12, { type: 'triangle', gain: 0.1, delay: 0.05 });
+    } else {
+      // Chicken: a couple of squawks.
+      this.tone(900, 0.12, { type: 'square', gain: 0.12, slideTo: 1400 });
+      this.tone(1000, 0.14, { type: 'square', gain: 0.12, delay: 0.16, slideTo: 1500 });
     }
   }
 

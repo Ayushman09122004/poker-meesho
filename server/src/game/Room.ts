@@ -1,11 +1,13 @@
 import { Server } from 'socket.io';
-import { ChatMessage, RoomSettings } from '../../../shared/types';
+import { ChatMessage, RoomSettings, ThrowEvent, ThrowItem } from '../../../shared/types';
 import { ServerEvents } from '../../../shared/events';
 import { runoutCardCount, showdownTimeline } from '../../../shared/showdownTiming';
 import { PokerEngine } from './PokerEngine';
 import { generateId } from '../utils/rng';
 import { botThinkMs, decideBotAction } from './BotBrain';
 import { ProfileBook, describeRead } from './PlayerProfiles';
+import { SideBetBook } from './SideBets';
+import { THROW_ITEMS, ThrowLimiter } from './Throwables';
 
 const NEXT_HAND_DELAY_MS = 4500;
 const CHAT_HISTORY_LIMIT = 100;
@@ -30,6 +32,10 @@ export class Room {
   /** Busted bots waiting for the host's OK to buy back in, and ones the host refused. */
   private pendingBotRebuys = new Set<string>();
   private declinedBotRebuys = new Set<string>();
+  private sideBets = new SideBetBook();
+  private throwLimiter = new ThrowLimiter();
+  private lastBountyAnnounced = 0;
+  private destroyed = false;
   private handsSinceRemark = 0;
   lastActivityAt = Date.now();
 
@@ -108,11 +114,14 @@ export class Room {
   // ---------- Broadcasting ----------
 
   broadcastState(): void {
+    this.sideBets.sync(this.engine);
     for (const player of this.engine.players.values()) {
       const socketId = this.playerSocket.get(player.id);
       if (!socketId) continue;
       const snapshot = this.engine.getSnapshot(player.id);
       snapshot.botRebuyRequests = [...this.pendingBotRebuys];
+      snapshot.sideBet = this.sideBets.view(player.id, this.engine);
+      snapshot.throwsLeft = this.throwLimiter.remaining(player.id);
       this.io.to(socketId).emit(ServerEvents.StateUpdate, snapshot);
     }
     this.scheduleTurnTimer();
@@ -272,6 +281,57 @@ export class Room {
     this.afterEngineMutation();
   }
 
+  // ---------- Side bets & throwables ----------
+
+  pickSideBet(playerId: string, yes: boolean): void {
+    if (this.sideBets.pick(this.engine, playerId, yes)) this.broadcastState();
+  }
+
+  /**
+   * Throw a tomato / rose / beer / chicken at another player. Rate-limited per thrower; returns
+   * how long until they can throw again when over the limit.
+   */
+  throwItem(fromId: string, toId: string, item: ThrowItem): { ok: boolean; retryInMs?: number } {
+    if (!THROW_ITEMS.includes(item) || fromId === toId) return { ok: false };
+    const from = this.engine.players.get(fromId);
+    const to = this.engine.players.get(toId);
+    if (!from || !to) return { ok: false };
+    const allowed = this.throwLimiter.tryThrow(fromId);
+    if (!allowed.ok) return { ok: false, retryInMs: allowed.retryInMs };
+    const event: ThrowEvent = { id: generateId(8), fromId, toId, item };
+    for (const socketId of this.playerSocket.values()) {
+      if (socketId) this.io.to(socketId).emit(ServerEvents.ThrowBroadcast, event);
+    }
+    // Bots sometimes throw something back (they're limited the same way).
+    if (to.isBot && !from.isBot && Math.random() < 0.35) {
+      setTimeout(() => {
+        if (this.destroyed || !this.engine.players.has(toId) || !this.engine.players.has(fromId)) return;
+        const back: ThrowItem[] = ['tomato', 'chicken', 'tomato', 'beer'];
+        this.throwItem(toId, fromId, back[Math.floor(Math.random() * back.length)]);
+      }, 1300 + Math.random() * 1200);
+    }
+    this.broadcastState();
+    return { ok: true };
+  }
+
+  /** Bounty mode: announce knockouts — after the showdown has played, so nothing is spoiled. */
+  private announceBounties(): void {
+    const last = this.engine.handHistory[0];
+    if (!last || last.timestamp === this.lastBountyAnnounced) return;
+    this.lastBountyAnnounced = last.timestamp;
+    for (const b of this.engine.lastBounties) {
+      const hunter = this.engine.players.get(b.hunterId)?.name;
+      const victim = this.engine.players.get(b.victimId)?.name;
+      if (hunter && victim) this.systemChat(`🎯 ${hunter} collected the bounty on ${victim}!`);
+    }
+  }
+
+  /** Fresh session after the host restarts: clear requests and side-bet scores. */
+  onRestart(): void {
+    this.forgetBotRebuys();
+    this.sideBets.reset();
+  }
+
   /** Drop any buy-in requests for a player who left, or for everyone after a restart. */
   forgetBotRebuys(playerId?: string): void {
     if (playerId) {
@@ -287,6 +347,7 @@ export class Room {
     if (this.nextHandTimer) clearTimeout(this.nextHandTimer);
     this.nextHandTimer = setTimeout(() => {
       // Asked only now, after the end-of-hand sequence has played, so the chat can't spoil the result.
+      this.announceBounties();
       if (this.askBotRebuys()) this.broadcastState();
       if (this.engine.phase !== 'between_hands') return;
       if (!this.engine.canStartHand()) return;
@@ -310,6 +371,7 @@ export class Room {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.clearTurnTimer();
     if (this.nextHandTimer) clearTimeout(this.nextHandTimer);
     if (this.botTimer) clearTimeout(this.botTimer);

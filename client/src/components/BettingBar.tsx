@@ -145,6 +145,7 @@ function StatusLine({ snapshot, self, isHost }: { snapshot: GameStateSnapshot; s
     const champ = snapshot.players.find((p) => p.chips > 0)?.name ?? 'A player';
     text = `🏆 ${champ} takes the whole table!${isHost ? ' Open host controls to restart.' : ''}`;
   } else if (self?.status === 'eliminated') text = "You're out of chips — spectating.";
+  else if (self?.sittingOut && !self.hasCards) text = "☕ You're sitting out — press “I'm back” (top right) to be dealt in.";
   else if (self?.status === 'folded') text = 'You folded — watching this hand.';
   else if (self?.status === 'all_in') text = "You're all-in — good luck!";
   else if (snapshot.phase === 'hand_in_progress' && self && !self.hasCards) text = 'You’ll be dealt in next hand.';

@@ -64,6 +64,10 @@ export interface PublicPlayer {
   isBot: boolean;
   /** Bot difficulty 1–5 (0 for humans). */
   botLevel: number;
+  /** Chose to sit out: stays seated but isn't dealt in until they come back. */
+  sittingOut: boolean;
+  /** Bounty mode: how many players this player has knocked out. */
+  bounties: number;
   lastAction: PlayerAction | null;
   holeCards: Card[] | null; // only populated for the requesting player, or at showdown
   timeBankMs: number;
@@ -107,9 +111,54 @@ export interface RoomSettings {
   /** 'assisted' shows each player their own current best hand and highlights the cards making it up.
    *  'professional' shows nothing extra — just the cards, like a real table. */
   gameMode: GameMode;
+  /** Tournament: blinds rise on a timer, no rebuys, ends with a podium. */
+  tournament: boolean;
+  /** Tournament: minutes per blind level. */
+  blindLevelMinutes: number;
+  /** Bounty mode: knocking a player out earns a bounty badge. */
+  bounty: boolean;
 }
 
-export type GameMode = 'assisted' | 'professional';
+/** 'coach' = assisted plus a live win-chance meter for your own hand. */
+export type GameMode = 'assisted' | 'coach' | 'professional';
+
+export interface TournamentInfo {
+  level: number;
+  /** When the next blind level starts (ms epoch), or null before the first hand. */
+  levelEndsAt: number | null;
+  /** Player ids in the order they were knocked out (first out first). */
+  eliminations: string[];
+}
+
+export interface BountyEvent {
+  hunterId: string;
+  victimId: string;
+}
+
+/** The for-fun flop prediction for the current hand, as one viewer sees it. */
+export interface SideBetView {
+  question: string;
+  /** How many players have picked (picks stay hidden until the flop). */
+  pickCount: number;
+  myPick: boolean | null;
+  /** Can still pick (before the flop). */
+  open: boolean;
+  /** null until the flop decides it. */
+  result: boolean | null;
+  /** Everyone's picks, revealed once resolved. */
+  picks: { playerId: string; pick: boolean }[];
+  /** Correct guesses this session, by player id. */
+  scores: Record<string, number>;
+}
+
+export type ThrowItem = 'tomato' | 'rose' | 'beer' | 'chicken';
+
+export interface ThrowEvent {
+  id: string;
+  fromId: string;
+  toId: string;
+  item: ThrowItem;
+}
 
 export type TableTheme = 'midnight' | 'emerald' | 'crimson' | 'royal' | 'arena' | 'sakura' | 'gotham' | 'western' | 'matrix';
 
@@ -164,6 +213,14 @@ export interface GameStateSnapshot {
   allInRunoutFrom: number | null;
   /** Busted bots asking the host for permission to buy back in (player ids). */
   botRebuyRequests?: string[];
+  /** Tournament progress (null when not a tournament). */
+  tournament: TournamentInfo | null;
+  /** Bounty mode: knockouts that happened in the hand that just finished. */
+  lastBounties: BountyEvent[];
+  /** This hand's side bet, personalised per viewer. */
+  sideBet?: SideBetView;
+  /** How many throws this viewer has left in the current 5-minute window. */
+  throwsLeft?: number;
 }
 
 export interface WinnerAnnouncement {

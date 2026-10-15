@@ -1,4 +1,5 @@
 import {
+  BountyEvent,
   Card,
   GameStateSnapshot,
   HandHistoryEntry,
@@ -52,6 +53,16 @@ export class PokerEngine {
   revealedRunoutFrom: number | null = null;
   allInRunoutFrom: number | null = null;
 
+  // Tournament mode: blind level + when it started, and the knock-out order (for the podium).
+  blindLevel = 1;
+  levelStartedAt: number | null = null;
+  eliminationOrder: string[] = [];
+  /** The blinds the game started with — restored on restart (blind increases change settings). */
+  private initialBlinds: { sb: number; bb: number } | null = null;
+  // Bounty mode: knockouts per player, and the ones from the hand that just finished.
+  bounties = new Map<string, number>();
+  lastBounties: BountyEvent[] = [];
+
   constructor(roomCode: string, settings: RoomSettings) {
     this.roomCode = roomCode;
     this.settings = settings;
@@ -102,6 +113,7 @@ export class PokerEngine {
       isInHand: false,
       isBot: !!bot,
       botLevel: bot ? bot.level : 0,
+      sittingOut: false,
     };
     this.players.set(id, player);
     if (isHost) this.hostId = id;
@@ -135,12 +147,29 @@ export class PokerEngine {
     if (p) p.isReady = ready;
   }
 
+  /**
+   * Sit out / come back. Takes effect from the next hand — a hand already in progress plays on
+   * normally (the player can still act or fold in it).
+   */
+  setSittingOut(id: string, sittingOut: boolean): void {
+    const p = this.players.get(id);
+    if (!p || p.isBot) return;
+    p.sittingOut = sittingOut;
+    if (!sittingOut && p.status === 'sitting_out') p.status = 'waiting';
+    if (sittingOut && !p.isInHand && p.status !== 'eliminated') p.status = 'sitting_out';
+  }
+
+  /** Seated, has chips, and hasn't chosen to sit out — gets dealt into the next hand. */
+  private isDealable(p: EnginePlayer): boolean {
+    return p.status !== 'eliminated' && p.chips > 0 && !p.sittingOut;
+  }
+
   activeSeatedPlayers(): EnginePlayer[] {
     return [...this.players.values()].filter((p) => p.status !== 'eliminated');
   }
 
   canStartHand(): boolean {
-    const eligible = this.activeSeatedPlayers().filter((p) => p.chips > 0);
+    const eligible = [...this.players.values()].filter((p) => this.isDealable(p));
     return eligible.length >= 2 && this.phase !== 'hand_in_progress';
   }
 
@@ -173,6 +202,16 @@ export class PokerEngine {
     this.allInRunoutFrom = null;
     this.currentTurnPlayerId = null;
     this.turnExpiresAt = null;
+    if (this.initialBlinds) {
+      this.settings.smallBlind = this.initialBlinds.sb;
+      this.settings.bigBlind = this.initialBlinds.bb;
+      this.initialBlinds = null;
+    }
+    this.blindLevel = 1;
+    this.levelStartedAt = null;
+    this.eliminationOrder = [];
+    this.bounties.clear();
+    this.lastBounties = [];
     for (const p of this.players.values()) {
       p.chips = this.settings.startingChips;
       p.bet = 0;
@@ -220,7 +259,7 @@ export class PokerEngine {
   startHand(): { ok: boolean; error?: string } {
     if (!this.canStartHand()) return { ok: false, error: 'Not enough players with chips to start' };
 
-    const handPlayers = this.activeSeatedPlayers().filter((p) => p.chips > 0);
+    const handPlayers = [...this.players.values()].filter((p) => this.isDealable(p));
     for (const p of this.players.values()) {
       p.bet = 0;
       p.totalCommitted = 0;
@@ -228,15 +267,21 @@ export class PokerEngine {
       p.lastAction = null;
       p.hasActedThisRound = false;
       p.isInHand = false;
-      if (p.chips > 0 && p.status !== 'eliminated') {
+      if (this.isDealable(p)) {
         p.status = 'active';
         p.isInHand = true;
       } else if (p.chips <= 0) {
         p.status = 'eliminated';
+      } else if (p.sittingOut) {
+        p.status = 'sitting_out';
       }
     }
 
+    if (this.handNumber === 0 && !this.initialBlinds) {
+      this.initialBlinds = { sb: this.settings.smallBlind, bb: this.settings.bigBlind };
+    }
     this.handNumber += 1;
+    this.lastBounties = [];
     this.maybeIncreaseBlinds();
 
     // Move the dealer button to the next occupied seat that still has chips.
@@ -307,14 +352,33 @@ export class PokerEngine {
   }
 
   private maybeIncreaseBlinds(): void {
+    if (this.settings.tournament) {
+      // Tournament: blinds go up every `blindLevelMinutes`, checked as each hand starts.
+      const now = Date.now();
+      const levelMs = this.settings.blindLevelMinutes * 60_000;
+      if (this.levelStartedAt === null) {
+        this.levelStartedAt = now;
+        return;
+      }
+      if (now - this.levelStartedAt >= levelMs) {
+        this.raiseBlinds();
+        this.blindLevel += 1;
+        this.levelStartedAt = now;
+      }
+      return;
+    }
     if (!this.settings.blindIncreaseIntervalHands || this.settings.blindIncreaseIntervalHands <= 0) return;
     this.handsSinceBlindIncrease += 1;
     if (this.handsSinceBlindIncrease >= this.settings.blindIncreaseIntervalHands) {
       this.handsSinceBlindIncrease = 0;
-      const newBb = Math.max(this.settings.bigBlind + 2, Math.ceil((this.settings.bigBlind * 1.5) / 5) * 5);
-      this.settings.bigBlind = newBb;
-      this.settings.smallBlind = Math.max(1, Math.floor(newBb / 2));
+      this.raiseBlinds();
     }
+  }
+
+  private raiseBlinds(): void {
+    const newBb = Math.max(this.settings.bigBlind + 2, Math.ceil((this.settings.bigBlind * 1.5) / 5) * 5);
+    this.settings.bigBlind = newBb;
+    this.settings.smallBlind = Math.max(1, Math.floor(newBb / 2));
   }
 
   private setCurrentTurn(playerId: string | null): void {
@@ -770,9 +834,31 @@ export class PokerEngine {
     });
     if (this.handHistory.length > HAND_HISTORY_LIMIT) this.handHistory.pop();
 
+    // Who got knocked out this hand (they had chips coming in, none now).
+    const knockedOut = [...this.players.values()].filter((p) => p.chips <= 0 && p.status !== 'eliminated' && p.totalCommitted > 0);
     for (const p of this.players.values()) {
       if (p.chips <= 0) {
         p.status = 'eliminated';
+      }
+    }
+    if (knockedOut.length > 0) {
+      // Smaller stacks going into the hand are knocked out "first" (they finish lower).
+      knockedOut.sort((a, b) => a.totalCommitted - b.totalCommitted);
+      if (this.settings.tournament) {
+        for (const p of knockedOut) if (!this.eliminationOrder.includes(p.id)) this.eliminationOrder.push(p.id);
+      }
+      if (this.settings.bounty) {
+        // The bounty goes to whoever won the most from this hand.
+        const wonBy = new Map<string, number>();
+        for (const w of this.lastWinners ?? []) wonBy.set(w.playerId, (wonBy.get(w.playerId) ?? 0) + w.amount);
+        const hunter = [...wonBy.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+        if (hunter) {
+          for (const victim of knockedOut) {
+            if (victim.id === hunter) continue;
+            this.bounties.set(hunter, (this.bounties.get(hunter) ?? 0) + 1);
+            this.lastBounties.push({ hunterId: hunter, victimId: victim.id });
+          }
+        }
       }
     }
 
@@ -808,6 +894,8 @@ export class PokerEngine {
         isConnected: p.isConnected,
         isBot: p.isBot,
         botLevel: p.botLevel,
+        sittingOut: p.sittingOut,
+        bounties: this.bounties.get(p.id) ?? 0,
         isReady: p.isReady,
         lastAction: p.lastAction,
         holeCards: revealToViewer ? p.holeCards : null,
@@ -844,6 +932,14 @@ export class PokerEngine {
       handHistory: this.handHistory,
       revealedRunoutFrom: this.revealedRunoutFrom,
       allInRunoutFrom: this.allInRunoutFrom,
+      tournament: this.settings.tournament
+        ? {
+            level: this.blindLevel,
+            levelEndsAt: this.levelStartedAt === null ? null : this.levelStartedAt + this.settings.blindLevelMinutes * 60_000,
+            eliminations: [...this.eliminationOrder],
+          }
+        : null,
+      lastBounties: [...this.lastBounties],
     };
   }
 

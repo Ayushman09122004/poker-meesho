@@ -15,6 +15,9 @@ function makeSettings(overrides: Partial<RoomSettings> = {}): RoomSettings {
     rebuyEnabled: false,
     tableTheme: 'midnight',
     gameMode: 'professional',
+    tournament: false,
+    blindLevelMinutes: 8,
+    bounty: false,
     ...overrides,
   };
 }

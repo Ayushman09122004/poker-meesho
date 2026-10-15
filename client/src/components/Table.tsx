@@ -7,6 +7,8 @@ import { HostControlsModal } from './HostControlsModal';
 import { PokerTable2D } from './PokerTable2D';
 import { BettingBar } from './BettingBar';
 import { BotRebuyRequests } from './BotControls';
+import { SideBetCard, TournamentPill, TournamentPodium } from './GameModesUI';
+import { setSittingOut } from '../hooks/useGameConnection';
 import { leaveRoom } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
 import { computeHandHint } from '../lib/handHint';
@@ -33,7 +35,7 @@ export function Table() {
 
   const self = snapshot.players.find((p) => p.id === selfPlayerId);
   const handHint =
-    snapshot.settings.gameMode === 'assisted' && self?.status !== 'folded'
+    (snapshot.settings.gameMode === 'assisted' || snapshot.settings.gameMode === 'coach') && self?.status !== 'folded'
       ? computeHandHint(self?.holeCards, snapshot.communityCards)
       : null;
   const hint = handHint ? { name: handHint.result.rankName, keys: handHint.highlightedKeys } : null;
@@ -65,8 +67,26 @@ export function Table() {
             <div className="hidden sm:block bg-black/50 backdrop-blur px-3 py-1.5 rounded-lg text-xs text-slate-300">
               Hand #{snapshot.handNumber} · Blinds {snapshot.settings.smallBlind}/{snapshot.settings.bigBlind}
             </div>
+            <TournamentPill snapshot={snapshot} />
+            {snapshot.settings.bounty && (
+              <div className="hidden sm:block bg-black/50 backdrop-blur px-3 py-1.5 rounded-lg text-xs text-rose-200">🎯 Bounty mode</div>
+            )}
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+            {self && self.status !== 'eliminated' && (
+              <button
+                onClick={() => {
+                  sound.uiClick();
+                  setSittingOut(!self.sittingOut);
+                }}
+                title={self.sittingOut ? 'Get dealt back in from the next hand' : 'Skip hands until you come back (your chips stay)'}
+                className={`h-8 sm:h-9 px-3 rounded-full text-xs sm:text-sm font-semibold backdrop-blur transition ${
+                  self.sittingOut ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-black/50 text-slate-200 hover:bg-black/70'
+                }`}
+              >
+                {self.sittingOut ? "▶ I'm back" : '☕ Sit out'}
+              </button>
+            )}
             <IconButton title="Hand history" onClick={() => toggleHandHistory(true)}>
               📜
             </IconButton>
@@ -92,12 +112,18 @@ export function Table() {
           <PokerTable2D snapshot={snapshot} selfPlayerId={selfPlayerId} hint={hint} emotes={emotes} />
         </div>
 
+        {/* For-fun flop prediction */}
+        <div className="absolute left-2 sm:left-3 top-12 sm:top-14 z-20">
+          <SideBetCard snapshot={snapshot} selfPlayerId={selfPlayerId} />
+        </div>
+
         <div className="absolute right-2 sm:right-3 bottom-2 z-20">
           <ChatDock />
         </div>
       </div>
 
       {isHost && <BotRebuyRequests snapshot={snapshot} />}
+      <TournamentPodium snapshot={snapshot} isHost={isHost} />
       <BettingBar snapshot={snapshot} self={self} isHost={isHost} />
 
       {showStats && <StatsPanel snapshot={snapshot} selfPlayerId={selfPlayerId} onClose={() => toggleStats(false)} />}

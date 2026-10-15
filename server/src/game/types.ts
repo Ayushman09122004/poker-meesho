@@ -23,6 +23,8 @@ export interface EnginePlayer {
   isBot: boolean;
   /** Bot difficulty, 1 (easiest) to 5 (hardest); 0 for humans. */
   botLevel: number;
+  /** Chose to sit out: keeps the seat and chips but isn't dealt in. */
+  sittingOut: boolean;
 }
 
 export interface InternalPot {

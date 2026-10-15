@@ -7,6 +7,7 @@ import {
   HostUpdateSettingsPayload,
   JoinRoomPayload,
   JoinRoomResult,
+  ThrowItem,
 } from '../../../shared/types';
 import { ClientEvents, ServerEvents } from '../../../shared/events';
 import { RoomManager } from '../game/RoomManager';
@@ -175,7 +176,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
         return;
       }
       room.engine.resetGame();
-      room.forgetBotRebuys();
+      room.onRestart();
       room.systemChat('The host restarted the game. Everyone is back to the starting stack.');
       room.afterEngineMutation();
     });
@@ -255,6 +256,35 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       bot.botLevel = clampBotLevel(payload?.level);
       room.touch();
       room.broadcastState();
+    });
+
+    socket.on(ClientEvents.SetSittingOut, (payload: { sittingOut?: boolean }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      const sittingOut = !!payload?.sittingOut;
+      room.engine.setSittingOut(data.playerId, sittingOut);
+      const name = room.engine.players.get(data.playerId)?.name;
+      if (name) room.systemChat(sittingOut ? `☕ ${name} is sitting out.` : `${name} is back in the game.`);
+      room.touch();
+      room.afterEngineMutation();
+    });
+
+    socket.on(ClientEvents.SideBetPick, (payload: { yes?: boolean }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      room.pickSideBet(data.playerId, !!payload?.yes);
+    });
+
+    socket.on(ClientEvents.Throw, (payload: { targetPlayerId?: string; item?: string }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      const result = room.throwItem(data.playerId, String(payload?.targetPlayerId ?? ''), payload?.item as ThrowItem);
+      if (!result.ok && result.retryInMs) {
+        const secs = Math.ceil(result.retryInMs / 1000);
+        socket.emit(ServerEvents.RoomError, {
+          message: `Easy there! You can throw again in ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}.`,
+        });
+      }
     });
 
     socket.on(ClientEvents.AnswerBotRebuy, (payload: { targetPlayerId?: string; allow?: boolean }) => {

@@ -1,7 +1,7 @@
 import { GameMode, RoomSettings, TableTheme } from '../../../shared/types';
 
 const VALID_THEMES: TableTheme[] = ['midnight', 'emerald', 'crimson', 'royal', 'arena', 'sakura', 'gotham', 'western', 'matrix'];
-const VALID_MODES: GameMode[] = ['assisted', 'professional'];
+const VALID_MODES: GameMode[] = ['assisted', 'coach', 'professional'];
 
 export function defaultSettings(): RoomSettings {
   return {
@@ -16,6 +16,9 @@ export function defaultSettings(): RoomSettings {
     rebuyEnabled: true,
     tableTheme: 'midnight',
     gameMode: 'assisted',
+    tournament: false,
+    blindLevelMinutes: 8,
+    bounty: false,
   };
 }
 
@@ -37,8 +40,12 @@ export function sanitizeSettings(partial: Partial<RoomSettings>, base: RoomSetti
     maxPlayers: clamp(Math.round(merged.maxPlayers) || base.maxPlayers, 2, 9),
     isPrivate: !!merged.isPrivate,
     autoStartWhenReady: !!merged.autoStartWhenReady,
-    rebuyEnabled: !!merged.rebuyEnabled,
+    // Tournaments are freezeouts: once you're out, you're out.
+    rebuyEnabled: !!merged.rebuyEnabled && !merged.tournament,
     tableTheme: VALID_THEMES.includes(merged.tableTheme) ? merged.tableTheme : 'midnight',
     gameMode: VALID_MODES.includes(merged.gameMode) ? merged.gameMode : 'assisted',
+    tournament: !!merged.tournament,
+    blindLevelMinutes: clamp(Math.round(merged.blindLevelMinutes) || 8, 2, 30),
+    bounty: !!merged.bounty,
   };
 }

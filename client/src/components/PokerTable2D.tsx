@@ -16,6 +16,9 @@ import { WinFx, FxEvent, FX_DURATION_MS } from './WinFx';
 import { BigMoments, computeMoments } from './BigMoments';
 import { sound } from '../lib/sound';
 import { botLevelInfo } from './BotControls';
+import { ThrowFlight, ThrowMenu } from './Throwables';
+import { CoachMeter, RivalryBanner, useRivalry, useWinChance } from './TableExtras';
+import { useGameStore } from '../store/gameStore';
 
 // Signature moves heavy enough to shake the table.
 const SHAKY = new Set<FxKind>(['rage', 'boom', 'bullets', 'lightning']);
@@ -250,8 +253,23 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
 
   const dealerPlayer = snapshot.players.find((p) => p.seatIndex === snapshot.dealerSeat);
 
+  // Throwables: whose avatar was clicked (menu open), and where avatars are (flight targets).
+  const throws = useGameStore((s) => s.throws);
+  const [throwTarget, setThrowTarget] = useState<string | null>(null);
+  const avatarPoint = (seatIndex: number) => {
+    const g = geometryFor(seatIndex);
+    // Your own seat lays the avatar out to the left of your cards; others stack it above the name.
+    return g.rel === 0 ? { x: g.pos.x - 70 * seatScale, y: g.pos.y - 8 * seatScale } : { x: g.pos.x, y: g.pos.y - 18 * seatScale };
+  };
+
+  // Coach mode: your live chance of winning.
+  const coachPct = useWinChance(snapshot, selfPlayerId);
+
+  // Rivalries: two famous rivals fighting over a big pot.
+  const rivalry = useRivalry(snapshot);
+
   return (
-    <div ref={ref} className="absolute inset-0 flex items-center justify-center overflow-hidden">
+    <div ref={ref} className="absolute inset-0 flex items-center justify-center overflow-hidden" onClick={() => setThrowTarget(null)}>
       {/* Shakes on its own wrapper so the stage keeps its scale transform. */}
       <div className={shaking ? 'fx-shake' : ''}>
       <div className="relative shrink-0" style={{ width: L.w, height: L.h, transform: `scale(${scale})` }}>
@@ -325,6 +343,7 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
               </motion.div>
             )}
           </AnimatePresence>
+          {coachPct !== null && !seq.ended && <CoachMeter pct={coachPct} />}
         </div>
 
         {/* Bets in front of each player */}
@@ -390,6 +409,7 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
                 hint={hint}
                 dir={g.dir}
                 emote={[...emotes].reverse().find((e) => e.playerId === p.id)}
+                onPickTarget={p.id === selfPlayerId ? undefined : () => setThrowTarget((t) => (t === p.id ? null : p.id))}
               />
             </div>
           );
@@ -399,6 +419,37 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
         {fxEvents.map((ev) => (
           <WinFx key={ev.id} ev={ev} stageW={L.w} stageH={L.h} cx={L.cx} cy={L.cy} />
         ))}
+
+        {/* Rivalry banner */}
+        <AnimatePresence>
+          {rivalry && <RivalryBanner key={rivalry.key} rivalry={rivalry} players={snapshot.players} stageW={L.w} stageH={L.h} />}
+        </AnimatePresence>
+
+        {/* Throwables in flight */}
+        {throws.map((t) => {
+          const from = snapshot.players.find((p) => p.id === t.fromId);
+          const to = snapshot.players.find((p) => p.id === t.toId);
+          if (!from || !to) return null;
+          return <ThrowFlight key={t.id} from={avatarPoint(from.seatIndex)} to={avatarPoint(to.seatIndex)} item={t.item} scale={boost} />;
+        })}
+
+        {/* "Throw something at…" menu */}
+        {throwTarget &&
+          (() => {
+            const target = snapshot.players.find((p) => p.id === throwTarget);
+            if (!target) return null;
+            const at = avatarPoint(target.seatIndex);
+            return (
+              <ThrowMenu
+                at={{ x: at.x, y: at.y - 50 * seatScale }}
+                targetId={target.id}
+                targetName={target.name}
+                left={snapshot.throwsLeft ?? 5}
+                onClose={() => setThrowTarget(null)}
+                scale={boost}
+              />
+            );
+          })()}
       </div>
       </div>
     </div>
@@ -487,9 +538,11 @@ interface SeatPodProps {
   hint?: { name: string; keys: Set<string> } | null;
   dir: Point;
   emote?: EmoteEvent;
+  /** Clicking this player's avatar opens the throw menu (not on your own seat). */
+  onPickTarget?: () => void;
 }
 
-function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote }: SeatPodProps) {
+function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote, onPickTarget }: SeatPodProps) {
   const isTurn = snapshot.currentTurnPlayerId === p.id;
   const folded = p.status === 'folded';
   const out = p.status === 'eliminated';
@@ -504,6 +557,8 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote }: SeatPod
   const onFire = (p.stats?.currentWinStreak ?? 0) >= 3 && (!seq.ended || seq.awarded) && !out;
   // Before the pot is pushed, the stack shown excludes what this player is about to win.
   const displayChips = seq.ended && !seq.awarded ? p.chips - won : p.chips;
+  // Bounty mode: this player knocked someone out in the hand that just finished (shown with the pot).
+  const gotBounty = seq.awarded && snapshot.lastBounties.some((b) => b.hunterId === p.id);
 
   const hasCards = p.holeCards ? p.holeCards.length > 0 : p.hasCards;
   const revealed = !isSelf && seq.ended && !!p.holeCards && seq.isRevealed(p.id);
@@ -598,8 +653,32 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote }: SeatPod
           )}
         </AnimatePresence>
 
-        {/* Avatar with turn timer */}
-        <div className="relative z-10" style={{ width: avatarSize + 12, height: avatarSize + 12, opacity: folded && !seq.ended ? 0.55 : 1 }}>
+        {/* Bounty mode: "🎯 BOUNTY!" pops when this player knocks someone out */}
+        <AnimatePresence>
+          {gotBounty && (
+            <motion.div
+              key="bounty"
+              className="absolute -top-14 z-40 px-3 py-1 rounded-full bg-gradient-to-r from-rose-600 to-orange-500 text-white font-display font-black text-[15px] whitespace-nowrap shadow-glow"
+              initial={{ opacity: 0, y: 10, scale: 0.5 }}
+              animate={{ opacity: 1, y: 0, scale: [0.5, 1.2, 1] }}
+              exit={{ opacity: 0, y: -8 }}
+            >
+              🎯 BOUNTY!
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Avatar with turn timer (click someone else's to throw something at them) */}
+        <div
+          className={`relative z-10 ${onPickTarget ? 'cursor-pointer' : ''}`}
+          style={{ width: avatarSize + 12, height: avatarSize + 12, opacity: (folded && !seq.ended) || p.sittingOut ? 0.55 : 1 }}
+          title={onPickTarget ? `Throw something at ${p.name}` : undefined}
+          onClick={(e) => {
+            if (!onPickTarget) return;
+            e.stopPropagation();
+            onPickTarget();
+          }}
+        >
           {isTurn && (
             <motion.div
               className="absolute -inset-1 rounded-full"
@@ -633,6 +712,14 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote }: SeatPod
               title={`${p.stats.currentWinStreak} wins in a row`}
             >
               🔥{p.stats.currentWinStreak}
+            </span>
+          )}
+          {p.bounties > 0 && (
+            <span
+              className="absolute -left-1 bottom-1 z-10 text-[12px] font-extrabold px-1.5 py-0.5 rounded-full bg-gradient-to-b from-rose-500 to-rose-700 text-white border-2 border-ink-950"
+              title={`${p.bounties} knockout${p.bounties === 1 ? '' : 's'}`}
+            >
+              🎯{p.bounties}
             </span>
           )}
           {isTurn && snapshot.turnExpiresAt && <TimerRing expiresAt={snapshot.turnExpiresAt} totalMs={totalMs} size={avatarSize + 12} />}
@@ -686,6 +773,8 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote }: SeatPod
               <Tag key="hand" text={showdownHand} cls={loserAtShowdown ? 'bg-black/70 text-slate-300' : 'bg-black/70 text-white'} />
             ) : out ? (
               <Tag key="out" text="Out" cls="bg-black/60 text-slate-400" />
+            ) : p.sittingOut && !p.hasCards ? (
+              <Tag key="sit" text="☕ Sitting out" cls="bg-black/60 text-slate-300" />
             ) : !p.isConnected ? (
               <Tag key="dc" text="Away" cls="bg-black/60 text-amber-300" />
             ) : p.status === 'all_in' ? (

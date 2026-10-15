@@ -12,6 +12,8 @@ import {
   JoinRoomResult,
   PlayerAction,
   RoomSettings,
+  ThrowEvent,
+  ThrowItem,
 } from '../../../shared/types';
 import { getSession, saveSession, clearSession, clearLastRoomCode } from '../lib/storage';
 
@@ -36,6 +38,10 @@ export function useGameConnection() {
 
     socket.on(ServerEvents.EmoteBroadcast, (payload: { playerId: string; emoji: string }) => {
       useGameStore.getState().pushEmote(payload.playerId, payload.emoji);
+    });
+
+    socket.on(ServerEvents.ThrowBroadcast, (t: ThrowEvent) => {
+      useGameStore.getState().pushThrow(t);
     });
 
     socket.on(ServerEvents.RoomError, (payload: { message: string }) => {
@@ -138,6 +144,18 @@ export function setBotLevel(targetPlayerId: string, level: number): void {
 
 export function answerBotRebuy(targetPlayerId: string, allow: boolean): void {
   socket.emit(ClientEvents.AnswerBotRebuy, { targetPlayerId, allow });
+}
+
+export function setSittingOut(sittingOut: boolean): void {
+  socket.emit(ClientEvents.SetSittingOut, { sittingOut });
+}
+
+export function pickSideBet(yes: boolean): void {
+  socket.emit(ClientEvents.SideBetPick, { yes });
+}
+
+export function throwAt(targetPlayerId: string, item: ThrowItem): void {
+  socket.emit(ClientEvents.Throw, { targetPlayerId, item });
 }
 
 export function requestRebuy(): void {

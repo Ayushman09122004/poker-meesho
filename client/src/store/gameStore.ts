@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ChatMessage, GameStateSnapshot } from '../../../shared/types';
+import { ChatMessage, GameStateSnapshot, ThrowEvent } from '../../../shared/types';
 
 export interface EmoteEvent {
   id: string;
@@ -26,6 +26,8 @@ interface GameStore {
   prevSnapshot: GameStateSnapshot | null;
   chat: ChatMessage[];
   emotes: EmoteEvent[];
+  /** Tomatoes, roses, beers and chickens currently flying across the table. */
+  throws: ThrowEvent[];
   toasts: Toast[];
   muted: boolean;
   showHostSettings: boolean;
@@ -38,6 +40,7 @@ interface GameStore {
   setSession: (roomCode: string, playerId: string) => void;
   setSnapshot: (s: GameStateSnapshot) => void;
   pushChat: (m: ChatMessage) => void;
+  pushThrow: (t: ThrowEvent) => void;
   pushEmote: (playerId: string, emoji: string) => void;
   expireEmote: (id: string) => void;
   pushToast: (text: string, tone?: Toast['tone']) => void;
@@ -66,6 +69,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   prevSnapshot: null,
   chat: [],
   emotes: [],
+  throws: [],
   toasts: [],
   muted: false,
   showHostSettings: false,
@@ -90,6 +94,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     setTimeout(() => get().expireEmote(id), 2600);
   },
   expireEmote: (id) => set((state) => ({ emotes: state.emotes.filter((e) => e.id !== id) })),
+  pushThrow: (t) => {
+    set((state) => ({ throws: [...state.throws, t].slice(-12) }));
+    setTimeout(() => set((state) => ({ throws: state.throws.filter((x) => x.id !== t.id) })), 2600);
+  },
   pushToast: (text, tone = 'error') => {
     const id = uid();
     set((state) => ({ toasts: [...state.toasts, { id, text, tone }] }));
@@ -111,5 +119,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       prevSnapshot: null,
       chat: [],
       emotes: [],
+      throws: [],
     }),
 }));

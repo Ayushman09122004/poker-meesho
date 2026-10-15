@@ -13,5 +13,8 @@ export function defaultClientSettings(): Partial<RoomSettings> {
     rebuyEnabled: true,
     tableTheme: 'midnight',
     gameMode: 'assisted',
+    tournament: false,
+    blindLevelMinutes: 8,
+    bounty: false,
   };
 }
