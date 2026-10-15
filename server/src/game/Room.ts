@@ -5,6 +5,7 @@ import { runoutCardCount, showdownTimeline } from '../../../shared/showdownTimin
 import { PokerEngine } from './PokerEngine';
 import { generateId } from '../utils/rng';
 import { botThinkMs, decideBotAction } from './BotBrain';
+import { ProfileBook, describeRead } from './PlayerProfiles';
 
 const NEXT_HAND_DELAY_MS = 4500;
 const CHAT_HISTORY_LIMIT = 100;
@@ -23,6 +24,10 @@ export class Room {
   private turnTimer: ReturnType<typeof setTimeout> | null = null;
   private nextHandTimer: ReturnType<typeof setTimeout> | null = null;
   private botTimer: ReturnType<typeof setTimeout> | null = null;
+  /** What the bots have learned about each player's habits this session. */
+  private notes = new ProfileBook();
+  private lastNotedHand = 0;
+  private handsSinceRemark = 0;
   lastActivityAt = Date.now();
 
   constructor(code: string, settings: RoomSettings, io: Server) {
@@ -160,9 +165,38 @@ export class Room {
     this.broadcastState();
 
     if (this.engine.phase === 'between_hands' || this.engine.phase === 'game_over') {
+      this.takeNotes();
       this.scheduleNextHand();
     }
     this.scheduleBotTurn();
+  }
+
+  /** After each hand, bots update their notes on everyone (from public actions and showdowns). */
+  private takeNotes(): void {
+    const last = this.engine.handHistory[0];
+    if (!last || last.timestamp === this.lastNotedHand) return;
+    this.lastNotedHand = last.timestamp;
+    this.notes.recordHand(last);
+    this.handsSinceRemark++;
+    this.maybeBotRemark();
+  }
+
+  /**
+   * Now and then a sharp bot lets a human know it has a read on them — so you can tell they're
+   * studying you. Rare (at most once every 6 hands, and only with a confident read).
+   */
+  private maybeBotRemark(): void {
+    if (this.handsSinceRemark < 6 || Math.random() > 0.35) return;
+    const players = [...this.engine.players.values()];
+    const watchers = players.filter((p) => p.isBot && p.botLevel >= 4 && p.status !== 'eliminated');
+    const humans = players.filter((p) => !p.isBot && p.isConnected);
+    if (watchers.length === 0 || humans.length === 0) return;
+    const target = humans[Math.floor(Math.random() * humans.length)];
+    const line = describeRead(target.name, this.notes.read(target.id));
+    if (!line) return;
+    const bot = watchers[Math.floor(Math.random() * watchers.length)];
+    this.handsSinceRemark = 0;
+    this.broadcastChat({ id: generateId(10), playerId: bot.id, name: `🤖 ${bot.name}`, text: line, ts: Date.now() });
   }
 
   // ---------- Bots ----------
@@ -190,7 +224,7 @@ export class Room {
       if (nowKey !== turnKey) return;
       let result: { ok: boolean };
       try {
-        const decision = decideBotAction(this.engine, bot);
+        const decision = decideBotAction(this.engine, bot, this.notes);
         result = this.engine.applyAction(bot.id, decision.action, decision.amount);
       } catch {
         result = { ok: false };

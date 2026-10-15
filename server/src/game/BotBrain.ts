@@ -9,11 +9,15 @@
 //   5 Pro      — near-accurate equity, balanced aggression, semi-bluffs, check-raises
 //
 // "Equity" is the bot's chance to win the pot, estimated by dealing out the unknown cards many
-// times (Monte Carlo) against the number of opponents still in the hand.
+// times (Monte Carlo) against the number of opponents still in the hand. Bots never see anyone
+// else's hidden cards. Regular (lightly), Shark and Pro bots also study opponents' habits
+// (see PlayerProfiles): they call bluffers lighter, respect tight players' bets, bluff players who
+// fold a lot, and value-bet bigger into players who never fold.
 import { Card, LegalActions, PlayerAction, RANKS, RANK_VALUE, SUITS } from '../../../shared/types';
 import { compareHands, evaluateHand } from '../../../shared/HandEvaluator';
 import type { PokerEngine } from './PokerEngine';
 import type { EnginePlayer } from './types';
+import { ProfileBook, TYPICAL } from './PlayerProfiles';
 
 export const BOT_LEVEL_NAMES = ['', 'Fish', 'Rookie', 'Regular', 'Shark', 'Pro'] as const;
 
@@ -98,15 +102,22 @@ function clampTo(amount: number, legal: LegalActions): number {
   return Math.round(Math.min(legal.maxRaiseTo, Math.max(legal.minRaiseTo, amount)));
 }
 
-export function decideBotAction(engine: PokerEngine, bot: EnginePlayer): BotDecision {
+/** How much each level uses its notes on opponents (Fish and Rookies don't study anyone). */
+const STUDY_WEIGHT: Record<number, number> = { 1: 0, 2: 0, 3: 0.35, 4: 0.75, 5: 1 };
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+export function decideBotAction(engine: PokerEngine, bot: EnginePlayer, notes?: ProfileBook): BotDecision {
   const legal = engine.getLegalActions(bot.id);
   if (!legal) return { action: 'fold' };
   const level = Math.min(5, Math.max(1, Math.round(bot.botLevel || 3)));
   const p = PROFILES[level];
   const rand = Math.random;
+  const study = notes ? STUDY_WEIGHT[level] : 0;
 
   const players = [...engine.players.values()];
-  const opponents = players.filter((o) => o.id !== bot.id && o.isInHand && o.status !== 'folded').length;
+  const opponentPlayers = players.filter((o) => o.id !== bot.id && o.isInHand && o.status !== 'folded');
+  const opponents = opponentPlayers.length;
   const board = engine.communityCards;
   const pot = players.reduce((s, o) => s + o.totalCommitted, 0);
   const toCall = legal.callAmount ?? 0;
@@ -121,6 +132,24 @@ export function decideBotAction(engine: PokerEngine, bot: EnginePlayer): BotDeci
   }
   equity = Math.max(0, Math.min(1, equity + (rand() * 2 - 1) * p.noise));
 
+  // --- Reading the opponents (only from what they've shown at this table) ---
+  const toCallNow = legal.callAmount ?? 0;
+  if (study > 0 && toCallNow > 0 && engine.lastAggressorId && engine.lastAggressorId !== bot.id) {
+    // Facing a bet: a habitual bluffer / maniac gets called lighter; a rock betting means business.
+    const r = notes!.read(engine.lastAggressorId);
+    const readAdj =
+      (r.aggression - TYPICAL.aggression) * 0.18 + (r.bluffRate - TYPICAL.bluffRate) * 0.3 + (r.looseness - TYPICAL.looseness) * 0.12;
+    equity = clamp(equity + study * clamp(readAdj, -0.12, 0.12), 0, 1);
+  }
+  // How often the players still in fold when bet into: folders get bluffed more, calling
+  // stations get bluffed less and value-bet thinner and bigger.
+  const avgFold =
+    study > 0 && opponents > 0
+      ? opponentPlayers.reduce((s, o) => s + notes!.read(o.id).foldToBet, 0) / opponents
+      : TYPICAL.foldToBet;
+  const bluffMult = clamp(1 + study * (avgFold - TYPICAL.foldToBet) * 4, 0.25, 2.5);
+  const stationFactor = study * Math.max(0, TYPICAL.foldToBet - avgFold); // 0 … ~0.45
+
   const fairShare = 1 / (Math.max(1, opponents) + 1);
   const edge = equity - fairShare; // > 0 means better than an average hand here
   const potOdds = toCall > 0 ? toCall / (pot + toCall) : 0;
@@ -131,7 +160,9 @@ export function decideBotAction(engine: PokerEngine, bot: EnginePlayer): BotDeci
   };
   const aggressive = (): BotDecision => {
     // Strength-scaled sizing: bigger with monsters, smaller with thin value or bluffs.
-    const fraction = edge > 0.35 ? 0.9 + rand() * 0.4 : edge > 0.15 ? 0.6 + rand() * 0.3 : 0.45 + rand() * 0.25;
+    const base = edge > 0.35 ? 0.9 + rand() * 0.4 : edge > 0.15 ? 0.6 + rand() * 0.3 : 0.45 + rand() * 0.25;
+    // Bet bigger for value into players who never fold.
+    const fraction = edge > 0.15 ? base * (1 + stationFactor) : base;
     const to = betSize(fraction);
     // Shoving range: huge edge, or the bet would commit most of the stack anyway.
     if (legal.canAllIn && (to >= legal.maxRaiseTo * 0.85 || (edge > 0.45 && level >= 4 && rand() < 0.3))) {
@@ -151,18 +182,19 @@ export function decideBotAction(engine: PokerEngine, bot: EnginePlayer): BotDeci
 
   // Nothing to call: bet for value, bluff sometimes, otherwise check.
   if (toCall === 0) {
-    const valueBar = 0.12 - p.aggression * 0.08;
+    const valueBar = 0.12 - p.aggression * 0.08 - stationFactor * 0.25;
     if (edge > valueBar && rand() < 0.45 + p.aggression * 0.5) return aggressive();
-    // Bluffs and semi-bluffs land more on later streets for stronger bots.
-    if (rand() < p.bluff * (board.length >= 3 ? 1.3 : 0.7)) return aggressive();
+    // Bluffs and semi-bluffs land more on later streets for stronger bots, and far more often
+    // against players it has seen fold a lot.
+    if (rand() < p.bluff * bluffMult * (board.length >= 3 ? 1.3 : 0.7)) return aggressive();
     return passive();
   }
 
   // Facing a bet.
   const raiseBar = 0.3 - p.aggression * 0.12;
   if (edge > raiseBar && rand() < 0.35 + p.aggression * 0.55) return aggressive();
-  // Pros occasionally check-raise / re-bluff.
-  if (level >= 4 && rand() < p.bluff * 0.35 && toCall <= pot * 0.6) return aggressive();
+  // Pros occasionally check-raise / re-bluff — more against known folders.
+  if (level >= 4 && rand() < p.bluff * bluffMult * 0.35 && toCall <= pot * 0.6) return aggressive();
 
   const callable = equity >= potOdds + p.callMargin;
   if (callable) return passive();
