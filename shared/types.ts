@@ -107,7 +107,7 @@ export interface RoomSettings {
 
 export type GameMode = 'assisted' | 'professional';
 
-export type TableTheme = 'midnight' | 'emerald' | 'crimson' | 'royal';
+export type TableTheme = 'midnight' | 'emerald' | 'crimson' | 'royal' | 'arena' | 'sakura' | 'gotham' | 'western' | 'matrix';
 
 export interface PlayerStats {
   handsPlayed: number;

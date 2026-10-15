@@ -12,8 +12,11 @@ export const SHOWDOWN_TIMING = {
   highlightHoldMs: 1800,
   uncontestedDelayMs: 700,
   chipFlightMs: 900,
-  /** Pause after the chips land, before the next hand is dealt. */
-  afterAwardMs: 2300,
+  /** Pause after the chips land, before the next hand is dealt (long enough for win effects). */
+  afterAwardMs: 2800,
+  /** All-in run-out: players flip quickly, then each remaining board card lands slowly. */
+  allInRevealMs: 700,
+  allInBoardCardMs: 1300,
 } as const;
 
 export interface ShowdownTimeline {
@@ -26,8 +29,20 @@ export interface ShowdownTimeline {
   nextHandAt: number;
 }
 
-export function showdownTimeline(opts: { runoutCards: number; revealCount: number; contested: boolean }): ShowdownTimeline {
+export function showdownTimeline(opts: { runoutCards: number; revealCount: number; contested: boolean; allIn?: boolean }): ShowdownTimeline {
   const t = SHOWDOWN_TIMING;
+
+  if (opts.allIn && opts.contested) {
+    // All-in: like a real table, everyone flips first, then the rest of the board is dealt slowly
+    // one card at a time while the tension builds.
+    const revealAt = Array.from({ length: opts.revealCount }, (_, i) => t.firstRevealDelayMs + i * t.allInRevealMs);
+    const boardStart = t.firstRevealDelayMs + opts.revealCount * t.allInRevealMs + 500;
+    const boardCardAt = Array.from({ length: opts.runoutCards }, (_, i) => boardStart + i * t.allInBoardCardMs);
+    const highlightAt = boardStart + opts.runoutCards * t.allInBoardCardMs + 400;
+    const awardAt = highlightAt + t.highlightHoldMs;
+    return { boardCardAt, revealAt, highlightAt, awardAt, nextHandAt: awardAt + t.chipFlightMs + t.afterAwardMs };
+  }
+
   const boardCardAt = Array.from({ length: opts.runoutCards }, (_, i) => i * t.boardCardMs);
   const boardDone = opts.runoutCards * t.boardCardMs;
 

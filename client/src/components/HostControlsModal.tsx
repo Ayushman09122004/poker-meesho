@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { GameStateSnapshot } from '../../../shared/types';
 import { AvatarBadge } from './AvatarBadge';
-import { kickPlayer, restartGame } from '../hooks/useGameConnection';
+import { kickPlayer, restartGame, updateSettings } from '../hooks/useGameConnection';
+import { THEMES } from './SettingsForm';
 
 interface HostControlsModalProps {
   snapshot: GameStateSnapshot;
@@ -48,6 +49,26 @@ export function HostControlsModal({ snapshot, onClose }: HostControlsModalProps)
               )}
             </div>
           ))}
+        </div>
+
+        <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Table theme — changes instantly</p>
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {THEMES.map((t) => {
+            const active = snapshot.settings.tableTheme === t.id;
+            return (
+              <button
+                key={t.id}
+                title={t.label}
+                onClick={() => updateSettings({ tableTheme: t.id })}
+                className={`flex flex-col items-center gap-0.5 rounded-lg p-1 border-2 transition ${active ? 'border-gold bg-gold/10' : 'border-transparent hover:bg-white/5'}`}
+              >
+                <span className="w-12 h-8 rounded-md flex items-center justify-center text-base" style={{ background: t.swatch }}>
+                  {t.icon}
+                </span>
+                <span className={`text-[9px] ${active ? 'text-gold-light' : 'text-slate-400'}`}>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="border-t border-white/10 pt-4">

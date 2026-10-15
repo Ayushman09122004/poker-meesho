@@ -10,6 +10,14 @@ import { AvatarBadge } from './AvatarBadge';
 import { ChipPile, formatChips } from './Chips';
 import { TimerRing } from './TimerRing';
 import { ShowdownState, cardKey, useShowdownSequence } from '../hooks/useShowdownSequence';
+import { themeLook } from '../lib/themes';
+import { fxForSeed, FxKind } from '../lib/characterFx';
+import { WinFx, FxEvent, FX_DURATION_MS } from './WinFx';
+import { BigMoments, computeMoments } from './BigMoments';
+import { sound } from '../lib/sound';
+
+// Signature moves heavy enough to shake the table.
+const SHAKY = new Set<FxKind>(['rage', 'boom', 'bullets', 'lightning']);
 
 // The whole table is laid out in a fixed design space and uniformly scaled to fit its container,
 // so seats, cards and bets never collide at odd viewport sizes. Tall containers (phones held
@@ -40,12 +48,7 @@ const SELF_DROP_PORTRAIT = 175;
 const MAX_BOOST = 1.45;
 const TARGET_EFFECTIVE_SCALE = 0.8;
 
-const THEME_FELT: Record<string, { light: string; dark: string; rail: [string, string] }> = {
-  midnight: { light: '#3f86b8', dark: '#1d4f7a', rail: ['#8a9bb0', '#3c4a5c'] },
-  emerald: { light: '#2fa776', dark: '#0f5c3d', rail: ['#8a6a48', '#3d2a17'] },
-  crimson: { light: '#b0384f', dark: '#5c1225', rail: ['#7a6a5a', '#2e231a'] },
-  royal: { light: '#6a4fb0', dark: '#2b1c5c', rail: ['#a39abf', '#3d3557'] },
-};
+type FeltLook = { light: string; dark: string; rail: [string, string] };
 
 const ACTION_LABEL: Record<PlayerAction, { text: string; cls: string }> = {
   fold: { text: 'Fold', cls: 'bg-slate-600 text-slate-100' },
@@ -150,7 +153,8 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
     return { rel, pos, dir, bet, dealer };
   };
 
-  const felt = THEME_FELT[snapshot.settings.tableTheme] ?? THEME_FELT.midnight;
+  const look = themeLook(snapshot.settings.tableTheme);
+  const felt: FeltLook = { ...look.felt, rail: look.rail };
   const seatScale = (count <= 6 ? 1 : 0.88) * boost;
   const inHand = snapshot.phase === 'hand_in_progress' || snapshot.phase === 'between_hands';
 
@@ -181,10 +185,21 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot]);
 
-  const awardedFor = useRef<number | null>(null);
+  const [fxEvents, setFxEvents] = useState<FxEvent[]>([]);
+  const fxId = useRef(0);
+  const [shakeKey, setShakeKey] = useState(0);
+  const [shaking, setShaking] = useState(false);
   useEffect(() => {
-    if (!seq.awarded || awardedFor.current === snapshot.handNumber) return;
-    awardedFor.current = snapshot.handNumber;
+    if (shakeKey === 0) return;
+    setShaking(true);
+    const t = setTimeout(() => setShaking(false), 950);
+    return () => clearTimeout(t);
+  }, [shakeKey]);
+
+  const awardedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!seq.awarded || !seq.handId || awardedFor.current === seq.handId) return;
+    awardedFor.current = seq.handId;
     const list: Omit<Flight, 'id'>[] = [];
     let i = 0;
     for (const [id, amount] of seq.wonBy) {
@@ -196,8 +211,32 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
     if (total >= snapshot.settings.bigBlind * 15) {
       setTimeout(() => confetti({ particleCount: 120, spread: 75, origin: { y: 0.55 }, colors: ['#e3b64f', '#f5d78a', '#ffffff'] }), 500);
     }
+
+    // Each winner's signature move, fired as their chips land.
+    const events: FxEvent[] = [];
+    for (const id of seq.wonBy.keys()) {
+      const p = snapshot.players.find((pl) => pl.id === id);
+      if (!p) continue;
+      const fx = fxForSeed(p.avatarSeed);
+      const g = geometryFor(p.seatIndex);
+      events.push({ id: ++fxId.current, x: g.pos.x, y: g.pos.y, potX: potPos.x, potY: potPos.y, kind: fx.kind, color: fx.color, line: fx.line });
+    }
+    if (events.length > 0) {
+      setTimeout(() => {
+        setFxEvents(events);
+        sound.signature(events[0].kind);
+        if (events.some((e) => SHAKY.has(e.kind))) setShakeKey((k) => k + 1);
+      }, SHOWDOWN_TIMING.chipFlightMs * 0.6);
+      setTimeout(() => setFxEvents((cur) => cur.filter((e) => !events.includes(e))), SHOWDOWN_TIMING.chipFlightMs * 0.6 + FX_DURATION_MS);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seq.awarded, snapshot.handNumber]);
+  }, [seq.awarded, seq.handId]);
+
+  // Bad beats rattle the table too.
+  const moments = computeMoments(snapshot, seq);
+  useEffect(() => {
+    if (moments.badBeat) setShakeKey((k) => k + 1);
+  }, [moments.badBeat]);
 
   // The pot shown on the felt excludes chips still sitting in front of players this round.
   const liveBets = snapshot.players.reduce((s, p) => s + p.bet, 0);
@@ -208,6 +247,8 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
 
   return (
     <div ref={ref} className="absolute inset-0 flex items-center justify-center overflow-hidden">
+      {/* Shakes on its own wrapper so the stage keeps its scale transform. */}
+      <div className={shaking ? 'fx-shake' : ''}>
       <div className="relative shrink-0" style={{ width: L.w, height: L.h, transform: `scale(${scale})` }}>
         <TableSurface L={L} felt={felt} />
 
@@ -348,12 +389,18 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
             </div>
           );
         })}
+
+        <BigMoments moments={moments} stageW={L.w} stageH={L.h} cx={L.cx} cy={L.cy} handKey={seq.handId ?? String(snapshot.handNumber)} />
+        {fxEvents.map((ev) => (
+          <WinFx key={ev.id} ev={ev} stageW={L.w} stageH={L.h} cx={L.cx} cy={L.cy} />
+        ))}
+      </div>
       </div>
     </div>
   );
 }
 
-function TableSurface({ L, felt }: { L: Layout; felt: (typeof THEME_FELT)[string] }) {
+function TableSurface({ L, felt }: { L: Layout; felt: FeltLook }) {
   return (
     <>
       <div
@@ -448,6 +495,8 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote }: SeatPod
   const isSB = snapshot.phase === 'hand_in_progress' && p.seatIndex === snapshot.smallBlindSeat;
   const isBB = snapshot.phase === 'hand_in_progress' && p.seatIndex === snapshot.bigBlindSeat;
   const action = p.lastAction ? ACTION_LABEL[p.lastAction] : null;
+  // On a heater: 3+ hands won in a row. (Not shown mid-showdown, before the latest win lands.)
+  const onFire = (p.stats?.currentWinStreak ?? 0) >= 3 && (!seq.ended || seq.awarded) && !out;
   // Before the pot is pushed, the stack shown excludes what this player is about to win.
   const displayChips = seq.ended && !seq.awarded ? p.chips - won : p.chips;
 
@@ -562,9 +611,25 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote }: SeatPod
               transition={{ duration: 1.2, repeat: Infinity }}
             />
           )}
+          {onFire && (
+            <motion.div
+              className="absolute -inset-2 rounded-full"
+              style={{ background: 'conic-gradient(from 0deg, #ff4d00, #ffb300, #ff4d00, #ff7a00, #ff4d00)', filter: 'blur(5px)' }}
+              animate={{ rotate: 360, opacity: [0.75, 1, 0.75] }}
+              transition={{ rotate: { duration: 2.4, repeat: Infinity, ease: 'linear' }, opacity: { duration: 1, repeat: Infinity } }}
+            />
+          )}
           <div className="absolute inset-[6px]">
             <AvatarBadge seed={p.avatarSeed} size={avatarSize} ring={isWinner ? 'gold' : 'none'} dimmed={!p.isConnected} />
           </div>
+          {onFire && (
+            <span
+              className="absolute -left-1 top-0 z-10 text-[12px] font-extrabold px-1.5 py-0.5 rounded-full bg-gradient-to-b from-orange-400 to-red-600 text-white border-2 border-ink-950"
+              title={`${p.stats.currentWinStreak} wins in a row`}
+            >
+              🔥{p.stats.currentWinStreak}
+            </span>
+          )}
           {isTurn && snapshot.turnExpiresAt && <TimerRing expiresAt={snapshot.turnExpiresAt} totalMs={totalMs} size={avatarSize + 12} />}
           {(isSB || isBB) && (
             <span

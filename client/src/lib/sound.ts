@@ -125,6 +125,58 @@ class SoundManager {
     notes.forEach((f, i) => this.tone(f, 0.35, { type: 'triangle', gain: 0.25, delay: i * 0.08 }));
   }
 
+  /** Low double thump — loops under an all-in run-out. */
+  heartbeat() {
+    this.tone(62, 0.16, { type: 'sine', gain: 0.55, slideTo: 45 });
+    this.tone(58, 0.14, { type: 'sine', gain: 0.4, delay: 0.2, slideTo: 42 });
+  }
+
+  /** Heavy hit for big banners (bad beat, monster pot, rare hand). */
+  stamp() {
+    this.tone(110, 0.35, { type: 'sawtooth', gain: 0.25, slideTo: 55 });
+    this.noiseBurst(0.25, { bandpassFreq: 400, gain: 0.35 });
+  }
+
+  /** A short sound to go with each character's signature win move. */
+  signature(kind: string) {
+    switch (kind) {
+      case 'fire':
+      case 'rage':
+      case 'boom':
+        this.noiseBurst(0.6, { bandpassFreq: 300, gain: 0.4 });
+        this.tone(90, 0.5, { type: 'sawtooth', gain: 0.18, slideTo: 50 });
+        break;
+      case 'ice':
+      case 'crystal':
+        [1800, 2400, 3000, 2200].forEach((f, i) => this.tone(f, 0.25, { type: 'sine', gain: 0.1, delay: i * 0.07 }));
+        break;
+      case 'lightning':
+      case 'laser':
+        this.noiseBurst(0.35, { bandpassFreq: 5000, gain: 0.35 });
+        this.tone(1400, 0.4, { type: 'square', gain: 0.08, slideTo: 200 });
+        break;
+      case 'slash':
+        this.noiseBurst(0.18, { bandpassFreq: 6000, gain: 0.3 });
+        this.noiseBurst(0.18, { bandpassFreq: 6000, gain: 0.3, delay: 0.15 });
+        break;
+      case 'bullets':
+        for (let i = 0; i < 4; i++) this.noiseBurst(0.08, { bandpassFreq: 1500, gain: 0.45, delay: i * 0.11 });
+        break;
+      case 'shadow':
+      case 'smoke':
+      case 'blood':
+      case 'sharingan':
+        this.tone(140, 0.9, { type: 'sine', gain: 0.25, slideTo: 70 });
+        this.tone(147, 0.9, { type: 'triangle', gain: 0.12, slideTo: 73 });
+        break;
+      case 'matrix':
+        [880, 660, 990, 740, 1100].forEach((f, i) => this.tone(f, 0.08, { type: 'square', gain: 0.06, delay: i * 0.06 }));
+        break;
+      default:
+        this.win();
+    }
+  }
+
   uiClick() {
     this.tone(700, 0.05, { type: 'square', gain: 0.08 });
   }

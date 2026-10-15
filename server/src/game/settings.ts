@@ -1,6 +1,6 @@
 import { GameMode, RoomSettings, TableTheme } from '../../../shared/types';
 
-const VALID_THEMES: TableTheme[] = ['midnight', 'emerald', 'crimson', 'royal'];
+const VALID_THEMES: TableTheme[] = ['midnight', 'emerald', 'crimson', 'royal', 'arena', 'sakura', 'gotham', 'western', 'matrix'];
 const VALID_MODES: GameMode[] = ['assisted', 'professional'];
 
 export function defaultSettings(): RoomSettings {

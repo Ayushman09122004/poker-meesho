@@ -6,11 +6,16 @@ interface SettingsFormProps {
   compact?: boolean;
 }
 
-const THEMES: { id: TableTheme; label: string; swatch: string }[] = [
+export const THEMES: { id: TableTheme; label: string; swatch: string; icon?: string }[] = [
   { id: 'midnight', label: 'Midnight', swatch: 'linear-gradient(135deg,#101a33,#1c2b52)' },
   { id: 'emerald', label: 'Emerald', swatch: 'linear-gradient(135deg,#0b3d2e,#125c44)' },
   { id: 'crimson', label: 'Crimson', swatch: 'linear-gradient(135deg,#3d0b17,#5c1225)' },
   { id: 'royal', label: 'Royal', swatch: 'linear-gradient(135deg,#1a1033,#2b1c52)' },
+  { id: 'arena', label: 'Kombat Arena', swatch: 'linear-gradient(135deg,#3a1206,#8a3a10)', icon: '🔥' },
+  { id: 'sakura', label: 'Sakura', swatch: 'linear-gradient(135deg,#4a1f3a,#d27aa3)', icon: '🌸' },
+  { id: 'gotham', label: 'Gotham', swatch: 'linear-gradient(135deg,#0b0f17,#2a3444)', icon: '🦇' },
+  { id: 'western', label: 'Wild West', swatch: 'linear-gradient(135deg,#3b2414,#9a6a3a)', icon: '🤠' },
+  { id: 'matrix', label: 'Matrix', swatch: 'linear-gradient(135deg,#020a04,#0e3a18)', icon: '💊' },
 ];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -173,19 +178,26 @@ export function SettingsForm({ settings, onChange, compact }: SettingsFormProps)
 
       <div className="col-span-2 sm:col-span-3">
         <span className="text-slate-400 text-xs uppercase tracking-wide">Table theme</span>
-        <div className="flex gap-3 mt-2">
-          {THEMES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => onChange({ tableTheme: t.id })}
-              className={`w-14 h-10 rounded-lg border-2 transition-all ${
-                (settings.tableTheme ?? 'midnight') === t.id ? 'border-gold scale-105' : 'border-white/10'
-              }`}
-              style={{ background: t.swatch }}
-              title={t.label}
-            />
-          ))}
+        <div className="flex flex-wrap gap-2 mt-2">
+          {THEMES.map((t) => {
+            const active = (settings.tableTheme ?? 'midnight') === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onChange({ tableTheme: t.id })}
+                className={`flex flex-col items-center gap-0.5 rounded-lg p-1 border-2 transition-all ${
+                  active ? 'border-gold scale-105 bg-gold/10' : 'border-transparent hover:bg-white/5'
+                }`}
+                title={t.label}
+              >
+                <span className="w-14 h-9 rounded-md flex items-center justify-center text-lg" style={{ background: t.swatch }}>
+                  {t.icon}
+                </span>
+                <span className={`text-[10px] ${active ? 'text-gold-light' : 'text-slate-400'}`}>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

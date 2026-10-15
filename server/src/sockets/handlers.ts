@@ -180,6 +180,15 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
         socket.emit(ServerEvents.RoomError, { message: 'Only the host can change settings' });
         return;
       }
+      // The table theme is purely cosmetic, so the host can switch it any time — without touching
+      // chips or interrupting the hand in progress.
+      const keys = Object.keys(payload.settings ?? {});
+      if (keys.length > 0 && keys.every((k) => k === 'tableTheme')) {
+        room.engine.settings = sanitizeSettings({ tableTheme: payload.settings.tableTheme }, room.engine.settings);
+        room.touch();
+        room.broadcastState();
+        return;
+      }
       if (room.engine.phase !== 'lobby') {
         socket.emit(ServerEvents.RoomError, { message: 'Settings can only change before the game starts' });
         return;

@@ -9,14 +9,8 @@ import { BettingBar } from './BettingBar';
 import { leaveRoom } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
 import { computeHandHint } from '../lib/handHint';
-
-// Room carpet behind the table, tinted to the table theme.
-const ROOM_TINT: Record<string, string> = {
-  midnight: '#1f3f66',
-  emerald: '#163f30',
-  crimson: '#4a1824',
-  royal: '#2c2152',
-};
+import { themeLook } from '../lib/themes';
+import { ThemeAmbience } from './ThemeAmbience';
 
 export function Table() {
   const snapshot = useGameStore((s) => s.snapshot);
@@ -42,7 +36,8 @@ export function Table() {
       ? computeHandHint(self?.holeCards, snapshot.communityCards)
       : null;
   const hint = handHint ? { name: handHint.result.rankName, keys: handHint.highlightedKeys } : null;
-  const tint = ROOM_TINT[snapshot.settings.tableTheme] ?? ROOM_TINT.midnight;
+  const look = themeLook(snapshot.settings.tableTheme);
+  const tint = look.room;
 
   return (
     <div
@@ -58,7 +53,7 @@ export function Table() {
           backgroundSize: '36px 36px, 36px 36px',
         }}
       />
-
+      <ThemeAmbience kind={look.ambience} />
       <div className="relative flex-1 min-h-0">
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-2 sm:p-3 pointer-events-none">

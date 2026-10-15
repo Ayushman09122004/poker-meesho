@@ -3,12 +3,16 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
 import { sendChat, sendEmote } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
+import { fxForSeed } from '../lib/characterFx';
 
 const QUICK_EMOJIS = ['👍', '😂', '🔥', '😮', '😢', '🤔', '😎', '🙌', '🃏', '🎉', '😴', '🤯'];
 const QUICK_PHRASES = ['Nice hand!', 'Good fold', 'Nh', 'Unlucky', 'Let\'s go!', 'gg'];
 
 export function ChatDock({ embedded = false }: { embedded?: boolean }) {
   const chat = useGameStore((s) => s.chat);
+  // Your own character's catchphrase as a one-tap line.
+  const mySeed = useGameStore((s) => s.snapshot?.players.find((p) => p.id === s.selfPlayerId)?.avatarSeed);
+  const catchphrase = mySeed ? fxForSeed(mySeed).line : null;
   const [text, setText] = useState('');
   const [open, setOpen] = useState(embedded);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -54,6 +58,15 @@ export function ChatDock({ embedded = false }: { embedded?: boolean }) {
         ))}
       </div>
       <div className="flex gap-1 px-2 pt-1.5 overflow-x-auto">
+        {catchphrase && (
+          <button
+            onClick={() => sendChat(catchphrase)}
+            title="Your character's catchphrase"
+            className="text-[11px] px-2 py-1 rounded-full bg-gold/20 border border-gold/50 hover:bg-gold/30 text-gold-light shrink-0 transition font-semibold"
+          >
+            ⭐ {catchphrase}
+          </button>
+        )}
         {QUICK_PHRASES.map((p) => (
           <button
             key={p}

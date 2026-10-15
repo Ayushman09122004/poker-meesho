@@ -6,6 +6,8 @@ import { comboKeys } from '../lib/handHint';
 export interface ShowdownState {
   /** True while the end-of-hand sequence for the hand just finished is playing (or holding at the end). */
   ended: boolean;
+  /** Unique id of the finished hand this sequence belongs to (null while a hand is in play). */
+  handId: string | null;
   /** How many community cards to show (run-out cards appear one at a time). */
   boardVisible: number;
   isRevealed: (playerId: string) => boolean;
@@ -30,8 +32,9 @@ export const cardKey = (c: Card | undefined | null) => (c ? `${c.rank}${c.suit}`
  */
 export function useShowdownSequence(s: GameStateSnapshot): ShowdownState {
   const ended = (s.phase === 'between_hands' || s.phase === 'game_over') && !!s.winnersAnnouncement?.length;
-  const key = ended ? s.handNumber : null;
-  const [start, setStart] = useState<{ key: number; at: number } | null>(null);
+  // Unique per finished hand (hand numbers restart at #1 when the host restarts the game).
+  const key = ended ? `${s.handNumber}:${s.handHistory[0]?.timestamp ?? 0}` : null;
+  const [start, setStart] = useState<{ key: string; at: number } | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -44,7 +47,7 @@ export function useShowdownSequence(s: GameStateSnapshot): ShowdownState {
 
   const contenders = s.showdown?.length ?? 0;
   const timeline = useMemo(
-    () => showdownTimeline({ runoutCards: runoutCardCount(s), revealCount: contenders, contested: contenders > 1 }),
+    () => showdownTimeline({ runoutCards: runoutCardCount(s), revealCount: contenders, contested: contenders > 1, allIn: s.allInRunoutFrom !== null }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [s.handNumber, contenders, s.allInRunoutFrom, s.revealedRunoutFrom, s.communityCards.length]
   );
@@ -96,6 +99,7 @@ export function useShowdownSequence(s: GameStateSnapshot): ShowdownState {
   if (!ended) {
     return {
       ended: false,
+      handId: null,
       boardVisible: s.communityCards.length,
       isRevealed: () => true,
       highlight: false,
@@ -114,6 +118,7 @@ export function useShowdownSequence(s: GameStateSnapshot): ShowdownState {
 
   return {
     ended: true,
+    handId: key,
     boardVisible,
     isRevealed: (id) => {
       const i = revealOrder.indexOf(id);

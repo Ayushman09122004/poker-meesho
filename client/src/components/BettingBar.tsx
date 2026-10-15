@@ -4,6 +4,7 @@ import { GameStateSnapshot, LegalActions, PublicPlayer } from '../../../shared/t
 import { requestRebuy, sendPlayerAction, useTimeBankAction } from '../hooks/useGameConnection';
 import { formatChips } from './Chips';
 import { sound } from '../lib/sound';
+import { useShowdownSequence } from '../hooks/useShowdownSequence';
 
 /** What to do automatically when your turn comes, ticked while waiting (like real poker apps). */
 type PreAction = 'check_fold' | 'check' | 'call_any';
@@ -126,8 +127,13 @@ export function BettingBar({ snapshot, self, isHost }: BettingBarProps) {
 }
 
 function StatusLine({ snapshot, self, isHost }: { snapshot: GameStateSnapshot; self: PublicPlayer | undefined; isHost: boolean }) {
+  // Don't give the result away while the showdown is still playing out on the table.
+  const seq = useShowdownSequence(snapshot);
+  const revealing = seq.ended && !seq.awarded;
   let text = 'Waiting for the next hand…';
-  if (snapshot.phase === 'game_over') {
+  if (revealing) {
+    text = snapshot.allInRunoutFrom !== null ? 'All in — running it out…' : 'Showdown…';
+  } else if (snapshot.phase === 'game_over') {
     const champ = snapshot.players.find((p) => p.chips > 0)?.name ?? 'A player';
     text = `🏆 ${champ} takes the whole table!${isHost ? ' Open host controls to restart.' : ''}`;
   } else if (self?.status === 'eliminated') text = "You're out of chips — spectating.";
@@ -138,7 +144,7 @@ function StatusLine({ snapshot, self, isHost }: { snapshot: GameStateSnapshot; s
   return (
     <div className="flex-1 flex items-center justify-center gap-3 text-sm text-slate-300">
       <span className="truncate">{text}</span>
-      {self?.status === 'eliminated' && snapshot.settings.rebuyEnabled && (
+      {!revealing && self?.status === 'eliminated' && snapshot.settings.rebuyEnabled && (
         <button
           onClick={requestRebuy}
           className="shrink-0 px-3 py-1.5 rounded-lg bg-gold text-ink-950 text-sm font-semibold hover:brightness-110 transition"

@@ -175,6 +175,7 @@ export class Room {
       runoutCards: runoutCardCount(snap),
       revealCount: snap.showdown?.length ?? 0,
       contested: (snap.showdown?.length ?? 0) > 1,
+      allIn: snap.allInRunoutFrom !== null,
     });
     return timeline.nextHandAt + 400;
   }
