@@ -1,7 +1,7 @@
 // The persona roster for the avatar picker: popular characters players can sit at the table as.
-// Portraits come from freely licensed Wikimedia Commons photos (cosplay for fictional characters),
-// listed with their credits in ./personas.json; any persona without a photo falls back to an
-// initials badge in its signature colours.
+// Portraits are in-character images only (cosplay photos from Wikimedia Commons, or character art
+// and stills from fan wikis), listed with their sources in ./personas.json; a persona without an
+// image falls back to an initials badge in its signature colours.
 import personaImages from './personas.json';
 
 export type PersonaGroup = 'villain' | 'icon' | 'anime' | 'wildcard';
@@ -59,8 +59,6 @@ const ROSTER: [string, string, string, PersonaGroup, string][] = [
   ['billy-butcher', 'Billy Butcher', 'The Boys', 'villain', '#78716c'],
   ['negan', 'Negan', 'The Walking Dead', 'villain', '#991b1b'],
   ['hannibal', 'Hannibal Lecter', 'Hannibal', 'villain', '#a8a29e'],
-  ['tyler-durden', 'Tyler Durden', 'Fight Club', 'villain', '#ec4899'],
-  ['patrick-bateman', 'Patrick Bateman', 'American Psycho', 'villain', '#e5e7eb'],
   ['john-wick', 'John Wick', 'John Wick', 'villain', '#64748b'],
   ['punisher', 'The Punisher', 'Marvel', 'villain', '#f8fafc'],
   ['blade', 'Blade', 'Marvel', 'villain', '#b91c1c'],
@@ -95,7 +93,6 @@ const ROSTER: [string, string, string, PersonaGroup, string][] = [
   ['peter-griffin', 'Peter Griffin', 'Family Guy', 'wildcard', '#22c55e'],
   ['michael-scott', 'Michael Scott', 'The Office', 'wildcard', '#3b82f6'],
   ['dwight', 'Dwight Schrute', 'The Office', 'wildcard', '#eab308'],
-  ['the-mask', 'The Mask', 'The Mask', 'wildcard', '#65a30d'],
   ['nicolas-cage', 'Nicolas Cage', 'Actor', 'wildcard', '#f97316'],
   ['jack-black', 'Jack Black', 'Actor', 'wildcard', '#ef4444'],
 ];

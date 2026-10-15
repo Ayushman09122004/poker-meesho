@@ -228,10 +228,14 @@
     "name": "Billy Butcher",
     "from": "The Boys",
     "group": "villain",
-    "file": null,
-    "focus": "50% 40%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/billy-butcher.webp",
+    "focus": "55% 27%",
+    "zoom": 2,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://theboys.fandom.com/wiki/Billy_Butcher"
+    }
   },
   {
     "id": "negan",
@@ -252,40 +256,28 @@
     "name": "Hannibal Lecter",
     "from": "The Silence of the Lambs",
     "group": "villain",
-    "file": null,
-    "focus": "55% 50%",
-    "zoom": 1,
-    "credit": null
-  },
-  {
-    "id": "tyler-durden",
-    "name": "Tyler Durden",
-    "from": "Fight Club",
-    "group": "villain",
-    "file": null,
-    "focus": "53% 34%",
-    "zoom": 1.1,
-    "credit": null
-  },
-  {
-    "id": "patrick-bateman",
-    "name": "Patrick Bateman",
-    "from": "American Psycho",
-    "group": "villain",
-    "file": null,
-    "focus": "52% 40%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/hannibal.webp",
+    "focus": "43% 45%",
+    "zoom": 1.2,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://hannibal.fandom.com/wiki/Hannibal_Lecter"
+    }
   },
   {
     "id": "john-wick",
     "name": "John Wick",
     "from": "John Wick",
     "group": "villain",
-    "file": null,
-    "focus": "53% 48%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/john-wick.webp",
+    "focus": "51% 21%",
+    "zoom": 2.4,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://johnwick.fandom.com/wiki/John_Wick"
+    }
   },
   {
     "id": "punisher",
@@ -348,10 +340,14 @@
     "name": "Wolverine",
     "from": "Marvel",
     "group": "icon",
-    "file": null,
-    "focus": "49% 44%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/wolverine.webp",
+    "focus": "50% 28%",
+    "zoom": 2.5,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://xmenmovies.fandom.com/wiki/Logan"
+    }
   },
   {
     "id": "geralt",
@@ -372,20 +368,28 @@
     "name": "Arthur Morgan",
     "from": "Red Dead Redemption 2",
     "group": "icon",
-    "file": null,
-    "focus": "50% 40%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/arthur-morgan.webp",
+    "focus": "47% 35%",
+    "zoom": 1.4,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://reddead.fandom.com/wiki/Arthur_Morgan"
+    }
   },
   {
     "id": "jin-sakai",
     "name": "Jin Sakai",
     "from": "Ghost of Tsushima",
     "group": "icon",
-    "file": null,
-    "focus": "50% 40%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/jin-sakai.webp",
+    "focus": "45% 25%",
+    "zoom": 1.9,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://ghostoftsushima.fandom.com/wiki/Jin_Sakai"
+    }
   },
   {
     "id": "agent-47",
@@ -476,10 +480,14 @@
     "name": "Thomas Shelby",
     "from": "Peaky Blinders",
     "group": "icon",
-    "file": null,
-    "focus": "44% 42%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/thomas-shelby.webp",
+    "focus": "37% 40%",
+    "zoom": 1.3,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://peaky-blinders.fandom.com/wiki/Thomas_Shelby"
+    }
   },
   {
     "id": "walter-white",
@@ -514,20 +522,28 @@
     "name": "Tony Montana",
     "from": "Scarface",
     "group": "icon",
-    "file": null,
-    "focus": "53% 44%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/tony-montana.webp",
+    "focus": "60% 37%",
+    "zoom": 1.5,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://scarface.fandom.com/wiki/Tony_Montana"
+    }
   },
   {
     "id": "sung-jin-woo",
     "name": "Sung Jin-Woo",
     "from": "Solo Leveling",
     "group": "anime",
-    "file": null,
-    "focus": "50% 40%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/sung-jin-woo.webp",
+    "focus": "52% 22%",
+    "zoom": 1.7,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://solo-leveling.fandom.com/wiki/Sung_Jinwoo"
+    }
   },
   {
     "id": "itachi",
@@ -576,20 +592,28 @@
     "name": "Sosuke Aizen",
     "from": "Bleach",
     "group": "anime",
-    "file": null,
-    "focus": "50% 40%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/aizen.webp",
+    "focus": "50% 45%",
+    "zoom": 1.1,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://bleach.fandom.com/wiki/S%C5%8Dsuke_Aizen"
+    }
   },
   {
     "id": "hisoka",
     "name": "Hisoka",
     "from": "Hunter x Hunter",
     "group": "anime",
-    "file": null,
-    "focus": "50% 40%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/hisoka.webp",
+    "focus": "50% 45%",
+    "zoom": 1.1,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://hunterxhunter.fandom.com/wiki/Hisoka_Morow"
+    }
   },
   {
     "id": "levi",
@@ -694,30 +718,28 @@
     "name": "Michael Scott",
     "from": "The Office",
     "group": "wildcard",
-    "file": null,
-    "focus": "33% 26%",
-    "zoom": 1.3,
-    "credit": null
+    "file": "/personas/michael-scott.webp",
+    "focus": "50% 15%",
+    "zoom": 1.8,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://theoffice.fandom.com/wiki/Michael_Scott"
+    }
   },
   {
     "id": "dwight",
     "name": "Dwight Schrute",
     "from": "The Office",
     "group": "wildcard",
-    "file": null,
-    "focus": "48% 40%",
-    "zoom": 1,
-    "credit": null
-  },
-  {
-    "id": "the-mask",
-    "name": "The Mask",
-    "from": "The Mask",
-    "group": "wildcard",
-    "file": null,
-    "focus": "53% 45%",
-    "zoom": 1,
-    "credit": null
+    "file": "/personas/dwight.webp",
+    "focus": "50% 22%",
+    "zoom": 1.9,
+    "credit": {
+      "author": "Fandom wiki",
+      "license": "Fan use (non-Commons)",
+      "source": "https://theoffice.fandom.com/wiki/Dwight_Schrute"
+    }
   },
   {
     "id": "nicolas-cage",

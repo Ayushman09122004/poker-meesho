@@ -43,19 +43,58 @@ export function AvatarBody({ seed, width }: { seed: string; width: number }) {
   );
 }
 
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+/**
+ * CSS to crop a photo into a square so the face sits as near the centre as the photo allows.
+ * `focus` is the face centre as a fraction of the photo (x, y); `ratio` is the photo's
+ * height / width. Returns object-position (which part of the photo shows) and the face's spot
+ * inside the square, used as the zoom origin so zooming in keeps the face in view.
+ */
+function faceCrop(fx: number, fy: number, ratio: number) {
+  if (ratio >= 1) {
+    // Tall photo: the square shows a full-width band; slide it so the face is centred vertically.
+    const py = ratio === 1 ? 0.5 : clamp01((fy * ratio - 0.5) / (ratio - 1));
+    return { position: `${fx * 100}% ${py * 100}%`, origin: { x: fx, y: fy * ratio - py * (ratio - 1) } };
+  }
+  const w = 1 / ratio;
+  const px = clamp01((fx * w - 0.5) / (w - 1));
+  return { position: `${px * 100}% ${fy * 100}%`, origin: { x: fx * w - px * (w - 1), y: fy } };
+}
+
 /** The portrait inside a circle: the persona photo cropped onto the face, or an initials badge. */
 export function PersonaPortrait({ seed, size }: { seed: string; size: number }) {
   const { image, focus, zoom, gradient, emoji } = getAvatar(seed);
   const [failed, setFailed] = useState(false);
+  const [ratio, setRatio] = useState<number | null>(null);
   if (image && !failed) {
+    const [fx, fy] = focus.split(' ').map((v) => parseFloat(v) / 100);
+    const crop = ratio ? faceCrop(fx, fy, ratio) : null;
+    // Once the face is placed, zoom in and nudge it toward the centre of the circle — but only as
+    // far as the zoom allows without pulling an empty edge into view.
+    const nudge = (o: number) => {
+      const z = Math.max(1, zoom);
+      return Math.min(o * (z - 1), Math.max(-(1 - o) * (z - 1), 0.5 - o)) * 100;
+    };
+    const shiftX = crop ? nudge(crop.origin.x) : 0;
+    const shiftY = crop ? nudge(crop.origin.y) : 0;
     return (
       <img
         src={image}
         alt=""
         draggable={false}
+        onLoad={(e) => setRatio(e.currentTarget.naturalHeight / e.currentTarget.naturalWidth)}
         onError={() => setFailed(true)}
         className="w-full h-full object-cover select-none"
-        style={{ objectPosition: focus, transform: `scale(${zoom})`, transformOrigin: focus }}
+        style={
+          crop
+            ? {
+                objectPosition: crop.position,
+                transformOrigin: `${crop.origin.x * 100}% ${crop.origin.y * 100}%`,
+                transform: `translate(${shiftX}%, ${shiftY}%) scale(${zoom})`,
+              }
+            : { objectPosition: focus, opacity: 0 }
+        }
       />
     );
   }

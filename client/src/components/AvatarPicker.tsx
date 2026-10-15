@@ -89,8 +89,9 @@ export function PersonaCredits({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="text-xs text-slate-400 mb-3">
-          Photos from Wikimedia Commons, used under their free licences. Fan-made personas — not affiliated with or endorsed by the
-          rights holders of these characters or by the people pictured.
+          Most photos are from Wikimedia Commons, used under their free licences; the rest are character images from fan wikis,
+          used for private fan play. Fan-made personas — not affiliated with or endorsed by the rights holders of these
+          characters or by the people pictured.
         </p>
         <ul className="space-y-1.5 text-xs">
           {credited.map((c) => (
