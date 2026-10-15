@@ -27,6 +27,9 @@ export class Room {
   /** What the bots have learned about each player's habits this session. */
   private notes = new ProfileBook();
   private lastNotedHand = 0;
+  /** Busted bots waiting for the host's OK to buy back in, and ones the host refused. */
+  private pendingBotRebuys = new Set<string>();
+  private declinedBotRebuys = new Set<string>();
   private handsSinceRemark = 0;
   lastActivityAt = Date.now();
 
@@ -109,6 +112,7 @@ export class Room {
       const socketId = this.playerSocket.get(player.id);
       if (!socketId) continue;
       const snapshot = this.engine.getSnapshot(player.id);
+      snapshot.botRebuyRequests = [...this.pendingBotRebuys];
       this.io.to(socketId).emit(ServerEvents.StateUpdate, snapshot);
     }
     this.scheduleTurnTimer();
@@ -236,20 +240,55 @@ export class Room {
     }, botThinkMs(this.engine, bot));
   }
 
-  /** Busted bots buy back in between hands when rebuys are on, so the table stays full. */
-  private rebuyBots(): void {
-    if (!this.engine.settings.rebuyEnabled) return;
+  /**
+   * Busted bots don't rebuy on their own — they ask the host, who allows or refuses. Asked once;
+   * a refused bot sits out until the host lets it back in from Host Controls.
+   */
+  private askBotRebuys(): boolean {
+    if (!this.engine.settings.rebuyEnabled) return false;
+    let asked = false;
     for (const p of this.engine.players.values()) {
-      if (p.isBot && p.chips <= 0 && this.engine.rebuy(p.id).ok) this.systemChat(`🤖 ${p.name} bought back in.`);
+      if (!p.isBot || p.chips > 0 || this.pendingBotRebuys.has(p.id) || this.declinedBotRebuys.has(p.id)) continue;
+      this.pendingBotRebuys.add(p.id);
+      this.systemChat(`🤖 ${p.name} is out of chips and asks the host to buy back in.`);
+      asked = true;
+    }
+    return asked;
+  }
+
+  /** The host's answer to a bot's buy-in request (also used to let a refused bot back in later). */
+  answerBotRebuy(botId: string, allow: boolean): void {
+    const bot = this.engine.players.get(botId);
+    if (!bot || !bot.isBot) return;
+    this.pendingBotRebuys.delete(botId);
+    if (!allow) {
+      this.declinedBotRebuys.add(botId);
+      this.systemChat(`The host said no — 🤖 ${bot.name} sits out.`);
+      this.broadcastState();
+      return;
+    }
+    this.declinedBotRebuys.delete(botId);
+    if (this.engine.rebuy(botId).ok) this.systemChat(`The host let 🤖 ${bot.name} buy back in.`);
+    this.afterEngineMutation();
+  }
+
+  /** Drop any buy-in requests for a player who left, or for everyone after a restart. */
+  forgetBotRebuys(playerId?: string): void {
+    if (playerId) {
+      this.pendingBotRebuys.delete(playerId);
+      this.declinedBotRebuys.delete(playerId);
+    } else {
+      this.pendingBotRebuys.clear();
+      this.declinedBotRebuys.clear();
     }
   }
 
   private scheduleNextHand(): void {
     if (this.nextHandTimer) clearTimeout(this.nextHandTimer);
-    if (this.engine.phase === 'game_over') return;
     this.nextHandTimer = setTimeout(() => {
+      // Asked only now, after the end-of-hand sequence has played, so the chat can't spoil the result.
+      if (this.askBotRebuys()) this.broadcastState();
       if (this.engine.phase !== 'between_hands') return;
-      this.rebuyBots();
       if (!this.engine.canStartHand()) return;
       this.engine.startHand();
       this.systemChat(`Hand #${this.engine.handNumber} started.`);

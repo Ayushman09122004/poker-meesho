@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { GameStateSnapshot } from '../../../shared/types';
 import { AvatarBadge } from './AvatarBadge';
-import { kickPlayer, restartGame, updateSettings } from '../hooks/useGameConnection';
+import { answerBotRebuy, kickPlayer, restartGame, updateSettings } from '../hooks/useGameConnection';
 import { THEMES } from './SettingsForm';
 import { AddBotButton, BotLevelSelect } from './BotControls';
 
@@ -50,6 +50,15 @@ export function HostControlsModal({ snapshot, onClose }: HostControlsModalProps)
                   )}
                 </div>
               </div>
+              {/* A busted bot (asking, or refused earlier) can be let back in from here. */}
+              {p.isBot && p.chips <= 0 && snapshot.settings.rebuyEnabled && (
+                <button
+                  onClick={() => answerBotRebuy(p.id, true)}
+                  className="text-xs px-2.5 py-1 rounded-full bg-emerald-900/50 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900 transition mr-1"
+                >
+                  Let back in
+                </button>
+              )}
               {p.id !== snapshot.hostId && (
                 <button
                   onClick={() => kickPlayer(p.id)}

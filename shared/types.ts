@@ -162,6 +162,8 @@ export interface GameStateSnapshot {
    * (these DO count). The client shows them one by one for drama. Null if no such run-out happened.
    */
   allInRunoutFrom: number | null;
+  /** Busted bots asking the host for permission to buy back in (player ids). */
+  botRebuyRequests?: string[];
 }
 
 export interface WinnerAnnouncement {

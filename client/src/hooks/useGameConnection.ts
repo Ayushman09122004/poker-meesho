@@ -136,6 +136,10 @@ export function setBotLevel(targetPlayerId: string, level: number): void {
   socket.emit(ClientEvents.SetBotLevel, { targetPlayerId, level });
 }
 
+export function answerBotRebuy(targetPlayerId: string, allow: boolean): void {
+  socket.emit(ClientEvents.AnswerBotRebuy, { targetPlayerId, allow });
+}
+
 export function requestRebuy(): void {
   socket.emit(ClientEvents.Rebuy);
 }

@@ -6,6 +6,7 @@ import { HandHistoryPanel } from './HandHistoryPanel';
 import { HostControlsModal } from './HostControlsModal';
 import { PokerTable2D } from './PokerTable2D';
 import { BettingBar } from './BettingBar';
+import { BotRebuyRequests } from './BotControls';
 import { leaveRoom } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
 import { computeHandHint } from '../lib/handHint';
@@ -96,6 +97,7 @@ export function Table() {
         </div>
       </div>
 
+      {isHost && <BotRebuyRequests snapshot={snapshot} />}
       <BettingBar snapshot={snapshot} self={self} isHost={isHost} />
 
       {showStats && <StatsPanel snapshot={snapshot} selfPlayerId={selfPlayerId} onClose={() => toggleStats(false)} />}

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
-import { PublicPlayer } from '../../../shared/types';
-import { addBot, setBotLevel } from '../hooks/useGameConnection';
+import { AnimatePresence, motion } from 'framer-motion';
+import { GameStateSnapshot, PublicPlayer } from '../../../shared/types';
+import { addBot, answerBotRebuy, setBotLevel } from '../hooks/useGameConnection';
 import { CHARACTERS, seedForCharacter } from '../lib/characters';
 import { getAvatar } from '../lib/avatar';
 import { AvatarPicker } from './AvatarPicker';
@@ -123,6 +123,55 @@ function AddBotDialog({ players, onClose }: { players: PublicPlayer[]; onClose: 
           </button>
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+/**
+ * Host-only cards for bots that ran out of chips and are asking to buy back in. Shown at the top
+ * of the table until the host answers.
+ */
+export function BotRebuyRequests({ snapshot }: { snapshot: GameStateSnapshot }) {
+  const requests = (snapshot.botRebuyRequests ?? [])
+    .map((id) => snapshot.players.find((p) => p.id === id))
+    .filter((p): p is PublicPlayer => !!p);
+  return (
+    <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 flex flex-col gap-2 pointer-events-none">
+      <AnimatePresence>
+        {requests.map((p) => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 0, y: -16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-sky-400/50 bg-ink-900/95 backdrop-blur px-4 py-2.5 shadow-card w-[min(94vw,520px)]"
+          >
+            <AvatarBadge seed={p.avatarSeed} size={40} />
+            <div className="text-sm flex-1 min-w-0">
+              <p className="text-white font-semibold">🤖 {p.name} is out of chips</p>
+              <p className="text-slate-400 text-xs">Let them buy back in for {snapshot.settings.startingChips.toLocaleString()} chips?</p>
+            </div>
+            <button
+              onClick={() => {
+                sound.uiClick();
+                answerBotRebuy(p.id, true);
+              }}
+              className="shrink-0 ml-2 px-3 py-1.5 rounded-lg bg-gradient-to-b from-emerald-500 to-emerald-700 text-white text-sm font-bold"
+            >
+              Allow
+            </button>
+            <button
+              onClick={() => {
+                sound.uiClick();
+                answerBotRebuy(p.id, false);
+              }}
+              className="shrink-0 px-3 py-1.5 rounded-lg bg-ink-800 border border-white/15 text-slate-300 text-sm"
+            >
+              No
+            </button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }

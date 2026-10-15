@@ -11,6 +11,7 @@ export const ClientEvents = {
   KickPlayer: 'host:kickPlayer',
   AddBot: 'host:addBot',
   SetBotLevel: 'host:setBotLevel',
+  AnswerBotRebuy: 'host:answerBotRebuy',
   Rebuy: 'player:rebuy',
   PlayerAction: 'game:action',
   UseTimeBank: 'player:useTimeBank',

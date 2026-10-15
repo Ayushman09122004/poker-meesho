@@ -175,6 +175,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
         return;
       }
       room.engine.resetGame();
+      room.forgetBotRebuys();
       room.systemChat('The host restarted the game. Everyone is back to the starting stack.');
       room.afterEngineMutation();
     });
@@ -216,6 +217,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       if (!target || target.id === data.playerId) return;
       const targetSocketId = room.socketIdFor(target.id);
       room.engine.removePlayer(target.id);
+      room.forgetBotRebuys(target.id);
       room.systemChat(`${target.name} was removed by the host.`);
       room.removeReconnectData(target.id);
       if (targetSocketId) {
@@ -253,6 +255,14 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       bot.botLevel = clampBotLevel(payload?.level);
       room.touch();
       room.broadcastState();
+    });
+
+    socket.on(ClientEvents.AnswerBotRebuy, (payload: { targetPlayerId?: string; allow?: boolean }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      if (room.engine.hostId !== data.playerId) return;
+      room.touch();
+      room.answerBotRebuy(String(payload?.targetPlayerId ?? ''), !!payload?.allow);
     });
 
     socket.on(ClientEvents.Rebuy, () => {
