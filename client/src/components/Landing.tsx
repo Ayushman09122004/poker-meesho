@@ -10,11 +10,18 @@ import { useGameStore } from '../store/gameStore';
 import { RoomSettings } from '../../../shared/types';
 import { defaultClientSettings } from '../lib/defaultSettings';
 
+/** Room code from an invite link (…/?room=ABCDE), if this page was opened from one. */
+function inviteCode(): string {
+  const code = new URLSearchParams(window.location.search).get('room') ?? '';
+  return code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+}
+
 export function Landing() {
-  const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu');
+  // Opening an invite link jumps straight to "join" with the room code filled in.
+  const [mode, setMode] = useState<'menu' | 'create' | 'join'>(() => (inviteCode() ? 'join' : 'menu'));
   const [name, setName] = useState(getSavedName());
   const [avatarSeed, setAvatarSeed] = useState(getSavedAvatarSeed());
-  const [roomCode, setRoomCode] = useState('');
+  const [roomCode, setRoomCode] = useState(inviteCode);
   const [settings, setSettings] = useState<Partial<RoomSettings>>(defaultClientSettings());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
