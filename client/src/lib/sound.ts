@@ -199,6 +199,61 @@ class SoundManager {
       this.voice.pause();
       this.voice = null;
     }
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+  }
+
+  /**
+   * Reads a trash-talk line aloud with the browser's speech engine. Like voice clips, only one
+   * line plays at a time, and nothing plays while muted.
+   */
+  speak(text: string, profile: { pitch: number; rate: number; variant: number }) {
+    if (this.muted || typeof speechSynthesis === 'undefined') return;
+    this.stopVoice();
+    const u = new SpeechSynthesisUtterance(text.replace(/[*…]/g, ' '));
+    const english = speechSynthesis.getVoices().filter((v) => v.lang.startsWith('en'));
+    const male = english.filter((v) => /male|david|mark|guy|daniel|george|james|ryan|fred|alex/i.test(v.name) && !/female/i.test(v.name));
+    const pool = male.length ? male : english;
+    if (pool.length) u.voice = pool[profile.variant % pool.length];
+    u.pitch = profile.pitch;
+    u.rate = profile.rate;
+    u.volume = 1;
+    speechSynthesis.speak(u);
+  }
+
+  /** Soundboard effects. */
+  sfx(kind: string) {
+    switch (kind) {
+      case 'trombone':
+        // Wah… wah… wah… waaaah.
+        [[392, 370], [370, 349], [349, 330], [330, 262]].forEach(([a, b], i) =>
+          this.tone(a, i === 3 ? 1.1 : 0.42, { type: 'sawtooth', gain: 0.12, delay: i * 0.48, slideTo: b }),
+        );
+        break;
+      case 'airhorn':
+        for (let i = 0; i < 3; i++) {
+          const d = i * 0.32;
+          const len = i === 2 ? 0.8 : 0.24;
+          this.tone(466, len, { type: 'sawtooth', gain: 0.13, delay: d });
+          this.tone(587, len, { type: 'sawtooth', gain: 0.1, delay: d });
+          this.tone(698, len, { type: 'square', gain: 0.05, delay: d });
+        }
+        break;
+      case 'drumroll':
+        for (let i = 0; i < 22; i++) this.noiseBurst(0.06, { bandpassFreq: 900, gain: 0.12 + i * 0.008, delay: i * 0.07 });
+        this.noiseBurst(0.6, { bandpassFreq: 4500, gain: 0.3, delay: 1.6 });
+        this.tone(90, 0.3, { type: 'sine', gain: 0.4, delay: 1.6, slideTo: 50 });
+        break;
+      case 'rimshot':
+        this.tone(180, 0.12, { type: 'sine', gain: 0.35, slideTo: 90 });
+        this.noiseBurst(0.08, { bandpassFreq: 1800, gain: 0.3, delay: 0.18 });
+        this.noiseBurst(0.7, { bandpassFreq: 7000, gain: 0.25, delay: 0.42 });
+        break;
+      case 'crickets':
+        for (let c = 0; c < 3; c++) {
+          for (let i = 0; i < 4; i++) this.tone(4300, 0.035, { type: 'sine', gain: 0.07, delay: c * 0.9 + i * 0.06 });
+        }
+        break;
+    }
   }
 
   /** Throwables: a quick whoosh as the item flies… */
