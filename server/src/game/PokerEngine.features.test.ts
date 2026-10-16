@@ -143,3 +143,12 @@ describe('Bounty mode', () => {
     expect(e.getSnapshot('a').players.every((p) => p.bounties === 0)).toBe(true);
   });
 });
+
+describe('Table themes', () => {
+  it('accepts every pop-culture theme and falls back to midnight for unknown ones', () => {
+    for (const t of ['hogwarts', 'galaxy', 'upsidedown', 'arkham', 'leaf', 'vicecity', 'frost', 'swamp', 'springfield', 'heisenberg', 'matrix'] as const) {
+      expect(settings({ tableTheme: t }).tableTheme).toBe(t);
+    }
+    expect(settings({ tableTheme: 'nope' as never }).tableTheme).toBe('midnight');
+  });
+});

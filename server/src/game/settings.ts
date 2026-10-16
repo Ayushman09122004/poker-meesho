@@ -1,6 +1,9 @@
 import { GameMode, RoomSettings, TableTheme } from '../../../shared/types';
 
-const VALID_THEMES: TableTheme[] = ['midnight', 'emerald', 'crimson', 'royal', 'arena', 'sakura', 'gotham', 'western', 'matrix'];
+const VALID_THEMES: TableTheme[] = [
+  'midnight', 'emerald', 'crimson', 'royal', 'arena', 'sakura', 'gotham', 'western', 'matrix',
+  'hogwarts', 'galaxy', 'upsidedown', 'arkham', 'leaf', 'vicecity', 'frost', 'swamp', 'springfield', 'heisenberg',
+];
 const VALID_MODES: GameMode[] = ['assisted', 'coach', 'professional'];
 
 export function defaultSettings(): RoomSettings {

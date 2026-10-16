@@ -160,7 +160,9 @@ export interface ThrowEvent {
   item: ThrowItem;
 }
 
-export type TableTheme = 'midnight' | 'emerald' | 'crimson' | 'royal' | 'arena' | 'sakura' | 'gotham' | 'western' | 'matrix';
+export type TableTheme =
+  | 'midnight' | 'emerald' | 'crimson' | 'royal' | 'arena' | 'sakura' | 'gotham' | 'western' | 'matrix'
+  | 'hogwarts' | 'galaxy' | 'upsidedown' | 'arkham' | 'leaf' | 'vicecity' | 'frost' | 'swamp' | 'springfield' | 'heisenberg';
 
 export interface PlayerStats {
   handsPlayed: number;

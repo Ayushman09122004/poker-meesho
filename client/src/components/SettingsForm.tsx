@@ -16,6 +16,16 @@ export const THEMES: { id: TableTheme; label: string; swatch: string; icon?: str
   { id: 'gotham', label: 'Gotham', swatch: 'linear-gradient(135deg,#0b0f17,#2a3444)', icon: '🦇' },
   { id: 'western', label: 'Wild West', swatch: 'linear-gradient(135deg,#3b2414,#9a6a3a)', icon: '🤠' },
   { id: 'matrix', label: 'Matrix', swatch: 'linear-gradient(135deg,#020a04,#0e3a18)', icon: '💊' },
+  { id: 'hogwarts', label: 'Wizarding Castle', swatch: 'linear-gradient(135deg,#3a0c0c,#8a2a2a)', icon: '🪄' },
+  { id: 'galaxy', label: 'Galaxy Far Away', swatch: 'linear-gradient(135deg,#05070f,#2a3550)', icon: '🌌' },
+  { id: 'upsidedown', label: 'Upside Down', swatch: 'linear-gradient(135deg,#160a0c,#2f4a52)', icon: '🔦' },
+  { id: 'arkham', label: 'Arkham Asylum', swatch: 'linear-gradient(135deg,#1e0a33,#5b2a8a 60%,#3fae4a)', icon: '🃏' },
+  { id: 'leaf', label: 'Hidden Leaf', swatch: 'linear-gradient(135deg,#7a3208,#e0782a)', icon: '🍃' },
+  { id: 'vicecity', label: 'Vice City', swatch: 'linear-gradient(135deg,#ff4fa3,#2a0a3a 55%,#1aa3b8)', icon: '🌴' },
+  { id: 'frost', label: 'Lin Kuei Frost', swatch: 'linear-gradient(135deg,#123a5c,#5aa8d8)', icon: '❄️' },
+  { id: 'swamp', label: "Shrek's Swamp", swatch: 'linear-gradient(135deg,#26360a,#6a8a2a)', icon: '🧅' },
+  { id: 'springfield', label: 'Springfield', swatch: 'linear-gradient(135deg,#1a5a9a,#4aa8e8 60%,#ffd90f)', icon: '🍩' },
+  { id: 'heisenberg', label: 'Heisenberg Lab', swatch: 'linear-gradient(135deg,#6a5028,#2a8a9a)', icon: '💎' },
 ];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

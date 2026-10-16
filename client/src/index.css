@@ -114,6 +114,87 @@ html, body, #root {
   100% { transform: translateY(150vh); }
 }
 
+/* Pop-culture themes */
+.amb-emoji { position: absolute; line-height: 1; animation-iteration-count: infinite; }
+.amb-falling { top: -40px; opacity: 0.8; animation-name: amb-fall; animation-timing-function: linear; }
+.amb-bob {
+  opacity: 0.85; filter: drop-shadow(0 0 10px rgba(255, 200, 100, 0.8));
+  animation-name: amb-bob; animation-timing-function: ease-in-out; animation-direction: alternate;
+}
+@keyframes amb-bob {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-26px); }
+}
+.amb-star {
+  position: absolute; border-radius: 9999px; background: #fff; box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+  animation-name: amb-twinkle; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-direction: alternate;
+}
+@keyframes amb-twinkle {
+  0% { opacity: 0.15; transform: scale(0.7); }
+  100% { opacity: 1; transform: scale(1.15); }
+}
+.amb-saber {
+  position: absolute; top: 18%; width: 10px; height: 60%; border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 18px 6px rgba(var(--saber), 0.8), 0 0 60px 20px rgba(var(--saber), 0.35);
+  opacity: 0.55; animation: amb-flicker 0.18s ease-in-out infinite alternate;
+}
+.amb-spore {
+  position: absolute; bottom: -10px; border-radius: 9999px; background: rgba(220, 220, 230, 0.55);
+  box-shadow: 0 0 6px rgba(220, 220, 230, 0.6);
+  animation-name: amb-rise; animation-timing-function: linear; animation-iteration-count: infinite;
+}
+.amb-redflash {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 40, 40, 0.35), transparent 60%);
+  opacity: 0; animation: amb-redflash 7s linear infinite;
+}
+@keyframes amb-redflash {
+  0%, 86%, 90%, 100% { opacity: 0; }
+  87%, 89% { opacity: 1; }
+  88% { opacity: 0.3; }
+}
+.amb-suit {
+  position: absolute; bottom: -40px; font-weight: 800; line-height: 1;
+  animation-name: amb-rise; animation-timing-function: linear; animation-iteration-count: infinite;
+}
+.amb-snow {
+  position: absolute; top: -10px; border-radius: 9999px; background: rgba(255, 255, 255, 0.85);
+  animation-name: amb-fall; animation-timing-function: linear; animation-iteration-count: infinite;
+}
+.amb-firefly {
+  position: absolute; border-radius: 9999px; background: #f6ff8a;
+  box-shadow: 0 0 10px 4px rgba(220, 255, 90, 0.7);
+  animation-name: amb-float; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-direction: alternate;
+}
+.amb-crystal {
+  position: absolute; transform: rotate(45deg); background: linear-gradient(135deg, #e6fbff, #5ad2ff);
+  box-shadow: 0 0 10px rgba(90, 210, 255, 0.9);
+  animation-name: amb-twinkle; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-direction: alternate;
+}
+.amb-sun {
+  position: absolute; top: 6%; left: calc(50% - 170px); width: 340px; height: 340px; border-radius: 50%;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 58%, rgba(42, 10, 58, 0.9) 58% 62%, transparent 62% 68%),
+    linear-gradient(to bottom, #ffd34f, #ff4fa3 70%);
+  box-shadow: 0 0 80px 20px rgba(255, 79, 163, 0.45);
+  opacity: 0.55;
+}
+.amb-grid {
+  position: absolute; left: -50%; right: -50%; bottom: 0; height: 45%;
+  background-image:
+    linear-gradient(rgba(255, 79, 163, 0.5) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(26, 220, 240, 0.45) 2px, transparent 2px);
+  background-size: 80px 60px;
+  transform: perspective(300px) rotateX(60deg); transform-origin: bottom;
+  animation: amb-grid 2.5s linear infinite;
+  mask-image: linear-gradient(to top, black 30%, transparent);
+}
+@keyframes amb-grid {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 60px; }
+}
+
 /* ---------- Big-moment effects ---------- */
 @keyframes fx-shake {
   0%, 100% { transform: translate(0, 0); }
