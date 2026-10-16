@@ -135,7 +135,7 @@ class SoundManager {
    * and length, so every clip runs through a limiter (no ear-blasting) and is faded out after
    * `maxMs`. Only one voice plays at a time — a new one cuts off the last.
    */
-  playVoice(clip: { url: string; gain?: number; start?: number; length?: number }) {
+  playVoice(clip: { url: string; gain?: number; start?: number; length?: number }, onError?: () => void) {
     const { url, gain: clipGain = 1, start = 0, length = 4.5 } = clip;
     const maxMs = length * 1000;
     const ctx = this.ensureCtx();
@@ -165,6 +165,7 @@ class SoundManager {
       return;
     }
     this.voice = audio;
+    if (onError) audio.addEventListener('error', onError, { once: true });
     audio.play().catch(() => {});
     this.voiceStop = setTimeout(() => {
       // Fade the tail out instead of chopping it.
@@ -220,40 +221,31 @@ class SoundManager {
     speechSynthesis.speak(u);
   }
 
-  /** Soundboard effects. */
-  sfx(kind: string) {
-    switch (kind) {
-      case 'trombone':
-        // Wah… wah… wah… waaaah.
-        [[392, 370], [370, 349], [349, 330], [330, 262]].forEach(([a, b], i) =>
-          this.tone(a, i === 3 ? 1.1 : 0.42, { type: 'sawtooth', gain: 0.12, delay: i * 0.48, slideTo: b }),
-        );
-        break;
-      case 'airhorn':
-        for (let i = 0; i < 3; i++) {
-          const d = i * 0.32;
-          const len = i === 2 ? 0.8 : 0.24;
-          this.tone(466, len, { type: 'sawtooth', gain: 0.13, delay: d });
-          this.tone(587, len, { type: 'sawtooth', gain: 0.1, delay: d });
-          this.tone(698, len, { type: 'square', gain: 0.05, delay: d });
-        }
-        break;
-      case 'drumroll':
-        for (let i = 0; i < 22; i++) this.noiseBurst(0.06, { bandpassFreq: 900, gain: 0.12 + i * 0.008, delay: i * 0.07 });
-        this.noiseBurst(0.6, { bandpassFreq: 4500, gain: 0.3, delay: 1.6 });
-        this.tone(90, 0.3, { type: 'sine', gain: 0.4, delay: 1.6, slideTo: 50 });
-        break;
-      case 'rimshot':
-        this.tone(180, 0.12, { type: 'sine', gain: 0.35, slideTo: 90 });
-        this.noiseBurst(0.08, { bandpassFreq: 1800, gain: 0.3, delay: 0.18 });
-        this.noiseBurst(0.7, { bandpassFreq: 7000, gain: 0.25, delay: 0.42 });
-        break;
-      case 'crickets':
-        for (let c = 0; c < 3; c++) {
-          for (let i = 0; i < 4; i++) this.tone(4300, 0.035, { type: 'sine', gain: 0.07, delay: c * 0.9 + i * 0.06 });
-        }
-        break;
+  private announcer: HTMLAudioElement | null = null;
+  private lastAnnounceAt = 0;
+
+  /**
+   * The all-in announcer (a deep villain voice). Runs on its own channel so it never cuts off a
+   * player's trash talk, and at most once every few seconds when several players shove at once.
+   */
+  announce(url: string) {
+    const ctx = this.ensureCtx();
+    const now = Date.now();
+    if (!ctx || !this.masterGain || now - this.lastAnnounceAt < 3000) return;
+    this.lastAnnounceAt = now;
+    this.announcer?.pause();
+    const audio = new Audio(url);
+    try {
+      // Same level as the character voices (which get ~+4 dB of make-up gain after their limiter).
+      const gain = ctx.createGain();
+      gain.gain.value = 1.6;
+      ctx.createMediaElementSource(audio).connect(gain);
+      gain.connect(this.masterGain);
+    } catch {
+      return;
     }
+    this.announcer = audio;
+    audio.play().catch(() => {});
   }
 
   /** Throwables: a quick whoosh as the item flies… */

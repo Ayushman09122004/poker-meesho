@@ -1,52 +1,15 @@
-// Say-it-out-loud chat lines. Your character's catchphrase plays in their real voice clip (see
-// characterFx); these extra lines are spoken by the browser's speech engine, with a voice tuned
-// to the character — deep for the villains, squeaky for the clowns.
+// Say-it-out-loud chat lines. Everything here is a real recording:
+//  - your character's catchphrase: their actual voice clip (characterFx), or a natural-voice
+//    recording for the few characters without one;
+//  - character lines and trash talk: natural (neural) voice recordings, in a voice that suits the
+//    character — deep for villains, British for Shelby & co, goofy for the comedians (talkData);
+//  - pop-culture quotes and the soundboard: the real movie/game/meme clips (popData).
+// The browser's speech engine is only a fallback if a recording can't be played.
 import { characterForSeed } from './characters';
+import { CHARACTER_CLIPS, CHARACTER_VOICE, COMMON_CLIPS, COMMON_LINES } from './talkData';
+import { POP_CULTURE, SOUND_BOARD } from './popData';
 
-/** Funny lines anyone can say. */
-export const COMMON_LINES = [
-  'Loser!',
-  'Noob!',
-  "He's bluffing!",
-  'Call! I dare you.',
-  'Fold, you coward!',
-  'Easy money!',
-  'Ship it!',
-  'GG, too easy.',
-  'Cry about it.',
-  'Nice hand… NOT!',
-  'All in, baby!',
-  'This deck is rigged!',
-  'I smell a bluff.',
-  'Thanks for the chips!',
-  'Skill issue.',
-  'Emotional damage!',
-  'Who taught you poker?',
-  'Is this your first time?',
-  'Respectfully… fold.',
-  'My grandma plays better than you.',
-  'Bro thinks he is in a movie.',
-  'Calculated.',
-  'Mom, come pick me up, I am scared.',
-  'Sir, this is a poker table.',
-  'Mwahahaha!',
-  'Oh no. Anyway.',
-];
-
-/** Soundboard: sent to chat as text, everyone hears the sound effect. */
-export const SOUND_BOARD: { text: string; sfx: SfxKind }[] = [
-  { text: '🎺 *sad trombone*', sfx: 'trombone' },
-  { text: '📯 *AIRHORN*', sfx: 'airhorn' },
-  { text: '🥁 *drumroll…*', sfx: 'drumroll' },
-  { text: '🥁 *ba-dum-tss*', sfx: 'rimshot' },
-  { text: '🦗 *crickets…*', sfx: 'crickets' },
-];
-
-export type SfxKind = 'trombone' | 'airhorn' | 'drumroll' | 'rimshot' | 'crickets';
-
-export function sfxForLine(text: string): SfxKind | null {
-  return SOUND_BOARD.find((s) => s.text === text)?.sfx ?? null;
-}
+export { COMMON_LINES, POP_CULTURE, SOUND_BOARD };
 
 /** Two extra lines per character, in their style. */
 const CHARACTER_LINES: Record<string, string[]> = {
@@ -112,20 +75,33 @@ export function characterLinesFor(seed: string): string[] {
   return CHARACTER_LINES[characterForSeed(seed).id] ?? [];
 }
 
+/**
+ * The recording to play when a player with this avatar sends `text`, or null if the text isn't
+ * one of the say-it-out-loud lines (then it's just a chat message).
+ */
+export function clipForLine(text: string, seed: string): string | null {
+  const id = characterForSeed(seed).id;
+  const pop = POP_CULTURE.find((p) => p.text === text) ?? SOUND_BOARD.find((s) => s.text === text);
+  if (pop) return pop.url;
+  const own = CHARACTER_CLIPS[id]?.[text];
+  if (own) return own;
+  const common = COMMON_CLIPS[text];
+  if (common) return common[CHARACTER_VOICE[id] ?? 'hero'];
+  return null;
+}
+
 /** Whether `text`, sent by a player with this avatar, is one of the lines that gets spoken aloud. */
 export function isSpeakableLine(text: string, seed: string): boolean {
   return COMMON_LINES.includes(text) || characterLinesFor(seed).includes(text);
 }
 
-const DEEP = new Set(['darth-vader', 'venom', 'kratos', 'shao-kahn', 'doom-slayer', 'ghost-rider', 'spawn', 'sukuna', 'batman', 'noob-saibot', 'scorpion', 'punisher', 'hannibal', 'blade', 'rorschach', 'madara', 'aizen', 'master-chief', 'agent-47', 'john-wick', 'geralt', 'toji']);
-const SQUEAKY = new Set(['mr-bean', 'peter-griffin', 'homer', 'deadpool', 'joker', 'danny-devito', 'hisoka', 'jack-sparrow', 'michael-scott', 'dwight', 'nicolas-cage', 'jack-black', 'shrek', 'saul-goodman']);
-
-/** How this character sounds when the speech engine reads their lines. */
+/** Fallback speech-engine voice for this character, if a recording fails to play. */
 export function speechProfile(seed: string): { pitch: number; rate: number; variant: number } {
   const id = characterForSeed(seed).id;
   let h = 0;
   for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  if (DEEP.has(id)) return { pitch: 0.35 + (h % 3) * 0.1, rate: 0.85, variant: h };
-  if (SQUEAKY.has(id)) return { pitch: 1.5 + (h % 3) * 0.15, rate: 1.1, variant: h };
-  return { pitch: 0.85 + (h % 4) * 0.08, rate: 1, variant: h };
+  const voice = CHARACTER_VOICE[id];
+  if (voice === 'deep') return { pitch: 0.45, rate: 0.9, variant: h };
+  if (voice === 'funny') return { pitch: 1.5, rate: 1.1, variant: h };
+  return { pitch: 0.95, rate: 1, variant: h };
 }

@@ -4,7 +4,7 @@ import { useGameStore } from '../store/gameStore';
 import { sendChat, sendEmote } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
 import { fxForSeed } from '../lib/characterFx';
-import { COMMON_LINES, SOUND_BOARD, characterLinesFor, isSpeakableLine, sfxForLine, speechProfile } from '../lib/trashTalk';
+import { COMMON_LINES, POP_CULTURE, SOUND_BOARD, characterLinesFor, clipForLine, speechProfile } from '../lib/trashTalk';
 
 /** One spoken line / sound per player at most this often, so nobody can spam the table. */
 const SAY_COOLDOWN_MS = 4000;
@@ -40,20 +40,17 @@ export function ChatDock({ embedded = false }: { embedded?: boolean }) {
     const canSay = !!sender && now - (lastSaidAt.current.get(sender.id) ?? 0) > SAY_COOLDOWN_MS;
     if (sender && canSay) {
       const fx = fxForSeed(sender.avatarSeed);
-      const sfx = sfxForLine(last.text);
       if (last.text === fx.line && fx.voice) {
         lastSaidAt.current.set(sender.id, now);
         sound.playVoice(fx.voice);
         return;
       }
-      if (last.text === fx.line || isSpeakableLine(last.text, sender.avatarSeed)) {
+      const clip = clipForLine(last.text, sender.avatarSeed);
+      if (clip) {
         lastSaidAt.current.set(sender.id, now);
-        sound.speak(last.text, speechProfile(sender.avatarSeed));
-        return;
-      }
-      if (sfx) {
-        lastSaidAt.current.set(sender.id, now);
-        sound.sfx(sfx);
+        // Real recording; if it can't play, the speech engine reads the line instead.
+        const profile = speechProfile(sender.avatarSeed);
+        sound.playVoice({ url: clip, gain: 1, length: 6 }, () => sound.speak(last.text.replace(/^🎬 /, ''), profile));
         return;
       }
     }
@@ -75,7 +72,7 @@ export function ChatDock({ embedded = false }: { embedded?: boolean }) {
   const body = (
     <div className={`flex flex-col ${embedded ? 'h-64' : 'h-full'}`}>
       {sayOpen ? (
-        <SayPanel catchphrase={catchphrase} hasVoice={!!myFx?.voice} characterLines={mySeed ? characterLinesFor(mySeed) : []} onSay={say} />
+        <SayPanel catchphrase={catchphrase} characterLines={mySeed ? characterLinesFor(mySeed) : []} onSay={say} />
       ) : (
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 text-sm">
         {chat.length === 0 && <p className="text-slate-500 text-xs italic">No messages yet. Say hi 👋</p>}
@@ -175,12 +172,10 @@ export function ChatDock({ embedded = false }: { embedded?: boolean }) {
 /** The say-it-out-loud picker: your character's lines, trash talk, and the soundboard. */
 function SayPanel({
   catchphrase,
-  hasVoice,
   characterLines,
   onSay,
 }: {
   catchphrase: string | null;
-  hasVoice: boolean;
   characterLines: string[];
   onSay: (line: string) => void;
 }) {
@@ -194,8 +189,7 @@ function SayPanel({
           <div className="flex flex-wrap gap-1">
             {catchphrase && (
               <button onClick={() => onSay(catchphrase)} className={`${chip} bg-gold/25 border border-gold/60 text-gold-light font-semibold hover:bg-gold/35`}>
-                {hasVoice ? '🎙️ ' : ''}
-                {catchphrase}
+                🎙️ {catchphrase}
               </button>
             )}
             {characterLines.map((l) => (
@@ -212,6 +206,21 @@ function SayPanel({
           {COMMON_LINES.map((l) => (
             <button key={l} onClick={() => onSay(l)} className={`${chip} bg-ink-700 hover:bg-ink-600 text-slate-200`}>
               {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-[10px] uppercase tracking-wide text-amber-300 mb-1">🎬 Pop culture</p>
+        <div className="flex flex-wrap gap-1">
+          {POP_CULTURE.map((p) => (
+            <button
+              key={p.text}
+              title={p.from}
+              onClick={() => onSay(p.text)}
+              className={`${chip} bg-amber-900/40 border border-amber-400/30 hover:bg-amber-800/50 text-amber-100`}
+            >
+              {p.text.replace(/^🎬 /, '')}
             </button>
           ))}
         </div>

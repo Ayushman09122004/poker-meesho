@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { sound } from '../lib/sound';
 import { saveMuted, getMuted } from '../lib/storage';
+import { ALL_IN_CLIPS } from '../lib/talkData';
 
 export function useSoundEffects() {
   const snapshot = useGameStore((s) => s.snapshot);
@@ -46,6 +47,14 @@ export function useSoundEffects() {
     for (const p of snapshot.players) {
       const prevP = prev.players.find((pp) => pp.id === p.id);
       if (!prevP) continue;
+      // Went all-in (a shove, or a call/raise for the whole stack). The engine stops updating
+      // lastAction once a player is all-in, so watch their status instead.
+      if (p.status === 'all_in' && prevP.status !== 'all_in') {
+        sound.allIn();
+        // The villain announcer — mostly the short "All in.", sometimes a longer line.
+        sound.announce(ALL_IN_CLIPS[Math.random() < 0.6 ? Math.floor(Math.random() * 2) : 2 + Math.floor(Math.random() * (ALL_IN_CLIPS.length - 2))]);
+        continue;
+      }
       if (p.lastAction && p.lastAction !== prevP.lastAction) {
         switch (p.lastAction) {
           case 'fold':
@@ -58,9 +67,6 @@ export function useSoundEffects() {
           case 'bet':
           case 'raise':
             sound.callOrBet();
-            break;
-          case 'all_in':
-            sound.allIn();
             break;
         }
       }
