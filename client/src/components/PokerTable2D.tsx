@@ -497,7 +497,13 @@ function TableSurface({ L, felt }: { L: Layout; felt: FeltLook }) {
             className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap font-display font-extrabold tracking-[0.25em] uppercase select-none italic"
             style={{ top: L.portrait ? '22%' : '20%', fontSize: L.portrait ? 30 : 40, color: 'rgba(255,255,255,0.10)' }}
           >
-            Felt &amp; Friends
+            Felt &amp; Friends™
+          </div>
+          <div
+            className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap font-display font-bold tracking-[0.3em] uppercase select-none"
+            style={{ top: L.portrait ? 'calc(22% - 20px)' : 'calc(20% - 24px)', fontSize: L.portrait ? 12 : 15, color: 'rgba(255,255,255,0.13)' }}
+          >
+            by Ayushman Ranjan
           </div>
         </div>
       </div>

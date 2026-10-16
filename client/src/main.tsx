@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
+console.log('%c♠ Felt & Friends™ — made by Ayushman Ranjan', 'color:#f5d78a;font-size:16px;font-weight:bold');
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

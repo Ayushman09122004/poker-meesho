@@ -1,3 +1,4 @@
+import { CREATOR, MadeBy } from './MadeBy';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { AvatarPicker, PersonaCredits } from './AvatarPicker';
@@ -83,8 +84,9 @@ export function Landing() {
       >
         <div className="text-center mb-6">
           <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-gold-light tracking-tight">
-            ♠ Felt &amp; Friends
+            ♠ Felt &amp; Friends<sup className="text-base align-super">™</sup>
           </h1>
+          <p className="text-gold-light/80 text-sm font-semibold mt-0.5">by {CREATOR}</p>
           <p className="text-slate-400 text-sm mt-1">Home-game Texas Hold'em. Virtual chips only — just for fun.</p>
         </div>
 
@@ -195,6 +197,7 @@ export function Landing() {
         <p className="text-center text-[11px] text-slate-500 mt-6">
           For entertainment only. No real money, no gambling, no purchasable or redeemable chips.
         </p>
+        <MadeBy className="text-center mt-2" />
       </motion.div>
       {showCredits && <PersonaCredits onClose={() => setShowCredits(false)} />}
     </div>

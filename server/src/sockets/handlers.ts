@@ -68,6 +68,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       data.playerId = playerId;
       socket.join(room.code);
       room.touch();
+      room.systemChat('Welcome to Felt & Friends™ — made by Ayushman Ranjan.');
       room.systemChat(`${cleanName(payload.name)} created the room.`);
       ack?.(joinResult(room.code, playerId, token));
       room.broadcastState();

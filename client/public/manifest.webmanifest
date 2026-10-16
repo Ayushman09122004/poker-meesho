@@ -1,7 +1,7 @@
 {
-  "name": "Felt & Friends — Home Poker",
-  "short_name": "Felt & Friends",
-  "description": "A polished Texas Hold'em poker table for you and your friends. Virtual chips only.",
+  "name": "Felt & Friends™ — Home Poker by Ayushman Ranjan",
+  "short_name": "Felt & Friends™",
+  "description": "Made by Ayushman Ranjan. A polished Texas Hold'em poker table for you and your friends. Virtual chips only.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -1,3 +1,4 @@
+import { MadeBy } from './MadeBy';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -153,6 +154,7 @@ export function TournamentPodium({ snapshot, isHost }: { snapshot: GameStateSnap
             ) : (
               <p className="mt-6 text-xs text-slate-400">Waiting for the host to start a new one…</p>
             )}
+            <MadeBy className="mt-4" />
           </motion.div>
         </motion.div>
       )}

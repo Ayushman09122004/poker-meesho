@@ -1,3 +1,4 @@
+import { MadeBy } from './MadeBy';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
@@ -163,6 +164,7 @@ export function Lobby() {
       <div className="w-full max-w-2xl mt-4">
         <ChatDock embedded />
       </div>
+      <MadeBy className="mt-4 text-center" />
     </div>
   );
 }
