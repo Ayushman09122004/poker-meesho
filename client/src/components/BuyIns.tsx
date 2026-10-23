@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChipRequestKind, GameStateSnapshot, PublicPlayer } from '../../../shared/types';
 import { buyInOptions } from '../../../shared/buyIn';
@@ -53,6 +53,64 @@ export function BuyInPicker({ snapshot, kind, onSent }: { snapshot: GameStateSna
   );
 }
 
+// Short anime "waiting…" loops (Naruto, Dragon Ball, etc. — converted from GIFs to tiny videos).
+const WAITING_CLIPS = Array.from({ length: 11 }, (_, i) => `/waiting/w${i}.mp4`);
+const randomClip = (not?: string) => {
+  const pool = WAITING_CLIPS.filter((c) => c !== not);
+  return pool[Math.floor(Math.random() * pool.length)];
+};
+
+/** A random anime waiting loop, switching to another one every few seconds. */
+export function AnimeWaiting({ className = '' }: { className?: string }) {
+  const [clip, setClip] = useState(() => randomClip());
+  useEffect(() => {
+    const t = setInterval(() => setClip((c) => randomClip(c)), 6000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className={`relative aspect-[4/3] rounded-xl overflow-hidden bg-black border border-white/10 ${className}`}>
+      <AnimatePresence mode="wait">
+        <motion.video
+          key={clip}
+          src={clip}
+          autoPlay
+          loop
+          muted
+          playsInline
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="absolute inset-0 w-full h-full object-contain"
+        />
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/** Corner card while a re-buy / top-up request waits for the host (doesn't block the table). */
+export function PendingRequestCard({ snapshot, selfId }: { snapshot: GameStateSnapshot; selfId: string | null }) {
+  const req = myRequest(snapshot, selfId);
+  return (
+    <AnimatePresence>
+      {req && req.kind !== 'seat' && (
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -30 }}
+          className="fixed left-3 bottom-24 z-40 w-[230px] rounded-2xl border border-gold/40 bg-ink-900/95 p-2.5 shadow-card pointer-events-none"
+        >
+          <AnimeWaiting />
+          <p className="text-[12px] text-slate-200 text-center mt-2 leading-snug">
+            Waiting for the host to approve your {req.kind === 'rebuy' ? 're-buy' : 'top-up'} of{' '}
+            <span className="text-gold-light font-bold">{formatChips(req.amount)}</span>…
+          </p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 /** Full-screen card for a player who has joined but isn't seated yet. */
 export function AwaitingSeatCard({ snapshot, self }: { snapshot: GameStateSnapshot; self: PublicPlayer }) {
   const req = myRequest(snapshot, self.id);
@@ -71,9 +129,7 @@ export function AwaitingSeatCard({ snapshot, self }: { snapshot: GameStateSnapsh
             <p className="text-slate-300 mt-3">
               Waiting for the host to approve your buy-in of <span className="text-gold-light font-bold">{formatChips(req.amount)}</span> chips…
             </p>
-            <div className="mt-4 flex justify-center">
-              <span className="w-6 h-6 rounded-full border-2 border-gold border-t-transparent animate-spin" />
-            </div>
+            <AnimeWaiting className="mt-4 mx-auto w-full max-w-[340px]" />
             <button onClick={() => setChanging(true)} className="mt-4 text-xs text-slate-400 hover:text-slate-200 underline">
               Change amount
             </button>

@@ -7,7 +7,7 @@ import { HostControlsModal } from './HostControlsModal';
 import { PokerTable2D } from './PokerTable2D';
 import { BettingBar } from './BettingBar';
 import { BotRebuyRequests } from './BotControls';
-import { AwaitingSeatCard, BuyInModal, HostChipRequests, LedgerModal, myRequest } from './BuyIns';
+import { AwaitingSeatCard, BuyInModal, HostChipRequests, LedgerModal, PendingRequestCard, myRequest } from './BuyIns';
 import { SideBetCard, TournamentPill, TournamentPodium } from './GameModesUI';
 import { setSittingOut } from '../hooks/useGameConnection';
 import { leaveRoom } from '../hooks/useGameConnection';
@@ -147,6 +147,7 @@ export function Table() {
       <TournamentPodium snapshot={snapshot} isHost={isHost} />
       <BettingBar snapshot={snapshot} self={self} isHost={isHost} onRebuyRequest={() => setBuyIn('rebuy')} />
       {self?.awaitingSeat && <AwaitingSeatCard snapshot={snapshot} self={self} />}
+      <PendingRequestCard snapshot={snapshot} selfId={selfPlayerId} />
       {buyIn && <BuyInModal snapshot={snapshot} kind={buyIn} onClose={() => setBuyIn(null)} />}
       {showLedger && <LedgerModal snapshot={snapshot} onClose={() => setShowLedger(false)} />}
 
