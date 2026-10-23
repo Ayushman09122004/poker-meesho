@@ -777,8 +777,12 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote, onPickTar
               </motion.span>
             ) : showdownHand ? (
               <Tag key="hand" text={showdownHand} cls={loserAtShowdown ? 'bg-black/70 text-slate-300' : 'bg-black/70 text-white'} />
+            ) : p.awaitingSeat ? (
+              <Tag key="await" text="⏳ Waiting for host" cls="bg-black/60 text-amber-300" />
             ) : out ? (
               <Tag key="out" text="Out" cls="bg-black/60 text-slate-400" />
+            ) : p.pendingChips > 0 && !seq.ended ? (
+              <Tag key="pend" text={`+${formatChips(p.pendingChips)} next hand`} cls="bg-black/60 text-emerald-300" />
             ) : p.sittingOut && !p.hasCards ? (
               <Tag key="sit" text="☕ Sitting out" cls="bg-black/60 text-slate-300" />
             ) : !p.isConnected ? (

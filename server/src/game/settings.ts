@@ -22,6 +22,7 @@ export function defaultSettings(): RoomSettings {
     tournament: false,
     blindLevelMinutes: 8,
     bounty: false,
+    hostApproval: false,
   };
 }
 
@@ -50,5 +51,6 @@ export function sanitizeSettings(partial: Partial<RoomSettings>, base: RoomSetti
     tournament: !!merged.tournament,
     blindLevelMinutes: clamp(Math.round(merged.blindLevelMinutes) || 8, 2, 30),
     bounty: !!merged.bounty,
+    hostApproval: !!merged.hostApproval,
   };
 }

@@ -6,6 +6,7 @@ import { AvatarBadge } from './AvatarBadge';
 import { kickPlayer, leaveRoom, setReady, startGame, updateSettings } from '../hooks/useGameConnection';
 import { AddBotButton, BotLevelSelect, botLevelInfo } from './BotControls';
 import { SettingsForm } from './SettingsForm';
+import { AwaitingSeatCard, HostChipRequests, myRequest } from './BuyIns';
 import { ChatDock } from './Chat';
 import { sound } from '../lib/sound';
 
@@ -18,7 +19,8 @@ export function Lobby() {
 
   if (!snapshot) return null;
   const self = snapshot.players.find((p) => p.id === selfPlayerId);
-  const canStart = snapshot.players.length >= 2;
+  // Players still waiting for the host to approve their buy-in can't be dealt in yet.
+  const canStart = snapshot.players.filter((p) => !p.awaitingSeat).length >= 2;
 
   const roomCode = snapshot.roomCode;
 
@@ -86,9 +88,14 @@ export function Lobby() {
                       {botLevelInfo(p.botLevel).icon} {botLevelInfo(p.botLevel).name}
                     </p>
                   )
+                ) : p.awaitingSeat ? (
+                  <p className="text-xs text-amber-300">
+                    ⏳ {myRequest(snapshot, p.id) ? `Asking for ${myRequest(snapshot, p.id)!.amount.toLocaleString()} chips` : 'Choosing a buy-in'}
+                  </p>
                 ) : (
                   <p className={`text-xs ${p.isReady ? 'text-emerald-400' : 'text-slate-500'}`}>
                     {!p.isConnected ? 'Disconnected' : p.isReady ? 'Ready' : 'Not ready'}
+                    {snapshot.settings.hostApproval && ` · ${p.chips.toLocaleString()} chips`}
                   </p>
                 )}
               </div>
@@ -128,8 +135,10 @@ export function Lobby() {
           </div>
         )}
 
+        {isHost && <HostChipRequests snapshot={snapshot} inline />}
+
         <div className="flex gap-3">
-          {self && (
+          {self && !self.awaitingSeat && (
             <button
               onClick={() => {
                 sound.uiClick();
@@ -165,6 +174,7 @@ export function Lobby() {
         <ChatDock embedded />
       </div>
       <MadeBy className="mt-4 text-center" />
+      {self?.awaitingSeat && <AwaitingSeatCard snapshot={snapshot} self={self} />}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { HostControlsModal } from './HostControlsModal';
 import { PokerTable2D } from './PokerTable2D';
 import { BettingBar } from './BettingBar';
 import { BotRebuyRequests } from './BotControls';
+import { AwaitingSeatCard, BuyInModal, HostChipRequests, LedgerModal, myRequest } from './BuyIns';
 import { SideBetCard, TournamentPill, TournamentPodium } from './GameModesUI';
 import { setSittingOut } from '../hooks/useGameConnection';
 import { leaveRoom } from '../hooks/useGameConnection';
@@ -30,6 +31,8 @@ export function Table() {
   const toggleHostSettings = useGameStore((s) => s.toggleHostSettings);
 
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [buyIn, setBuyIn] = useState<'rebuy' | 'topup' | null>(null);
+  const [showLedger, setShowLedger] = useState(false);
 
   if (!snapshot) return null;
 
@@ -73,7 +76,24 @@ export function Table() {
             )}
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
-            {self && self.status !== 'eliminated' && (
+            {snapshot.settings.hostApproval && self && !self.awaitingSeat && !snapshot.settings.tournament && (
+              <button
+                onClick={() => {
+                  sound.uiClick();
+                  if (!myRequest(snapshot, self.id)) setBuyIn(self.chips + self.pendingChips > 0 ? 'topup' : 'rebuy');
+                }}
+                title={myRequest(snapshot, self.id) ? 'Waiting for the host to approve your request' : 'Ask the host for more chips'}
+                className="h-8 sm:h-9 px-3 rounded-full text-xs sm:text-sm font-semibold backdrop-blur transition bg-black/50 text-slate-200 hover:bg-black/70"
+              >
+                {myRequest(snapshot, self.id) ? '⏳ Waiting for host' : '➕ Chips'}
+              </button>
+            )}
+            {snapshot.settings.hostApproval && (
+              <IconButton title="Ledger" onClick={() => setShowLedger(true)}>
+                📒
+              </IconButton>
+            )}
+            {self && self.status !== 'eliminated' && !self.awaitingSeat && (
               <button
                 onClick={() => {
                   sound.uiClick();
@@ -123,8 +143,12 @@ export function Table() {
       </div>
 
       {isHost && <BotRebuyRequests snapshot={snapshot} />}
+      {isHost && <HostChipRequests snapshot={snapshot} />}
       <TournamentPodium snapshot={snapshot} isHost={isHost} />
-      <BettingBar snapshot={snapshot} self={self} isHost={isHost} />
+      <BettingBar snapshot={snapshot} self={self} isHost={isHost} onRebuyRequest={() => setBuyIn('rebuy')} />
+      {self?.awaitingSeat && <AwaitingSeatCard snapshot={snapshot} self={self} />}
+      {buyIn && <BuyInModal snapshot={snapshot} kind={buyIn} onClose={() => setBuyIn(null)} />}
+      {showLedger && <LedgerModal snapshot={snapshot} onClose={() => setShowLedger(false)} />}
 
       {showStats && <StatsPanel snapshot={snapshot} selfPlayerId={selfPlayerId} onClose={() => toggleStats(false)} />}
       {showHandHistory && <HandHistoryPanel snapshot={snapshot} onClose={() => toggleHandHistory(false)} />}

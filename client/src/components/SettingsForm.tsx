@@ -169,7 +169,7 @@ export function SettingsForm({ settings, onChange, compact }: SettingsFormProps)
         </label>
       </div>
 
-      <div className="col-span-2 sm:col-span-3 grid sm:grid-cols-2 gap-2">
+      <div className="col-span-2 sm:col-span-3 grid sm:grid-cols-3 gap-2">
         <label
           className={`flex items-start gap-2 rounded-lg border-2 px-3 py-2 cursor-pointer transition ${
             settings.tournament ? 'border-gold bg-gold/10' : 'border-white/10 bg-ink-800 hover:bg-ink-700'
@@ -209,6 +209,22 @@ export function SettingsForm({ settings, onChange, compact }: SettingsFormProps)
           <span>
             <span className="block text-sm font-semibold text-slate-100">🎯 Bounty mode</span>
             <span className="block text-[11px] text-slate-400">Knock a player out to collect a bounty badge.</span>
+          </span>
+        </label>
+        <label
+          className={`flex items-start gap-2 rounded-lg border-2 px-3 py-2 cursor-pointer transition ${
+            settings.hostApproval ? 'border-emerald-400 bg-emerald-500/10' : 'border-white/10 bg-ink-800 hover:bg-ink-700'
+          }`}
+        >
+          <input
+            type="checkbox"
+            className="accent-gold w-4 h-4 mt-0.5"
+            checked={!!settings.hostApproval}
+            onChange={(e) => onChange({ hostApproval: e.target.checked })}
+          />
+          <span>
+            <span className="block text-sm font-semibold text-slate-100">🙋 Host approves buy-ins</span>
+            <span className="block text-[11px] text-slate-400">Players pick a buy-in; you approve seats, re-buys and top-ups.</span>
           </span>
         </label>
       </div>

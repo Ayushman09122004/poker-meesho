@@ -66,6 +66,12 @@ export interface PublicPlayer {
   botLevel: number;
   /** Chose to sit out: stays seated but isn't dealt in until they come back. */
   sittingOut: boolean;
+  /** Host-approval rooms: joined but not seated yet (waiting for the host to approve a buy-in). */
+  awaitingSeat: boolean;
+  /** Total chips this player has bought in for this session (the ledger). */
+  buyInTotal: number;
+  /** Approved chips that will be added when the current hand finishes. */
+  pendingChips: number;
   /** Bounty mode: how many players this player has knocked out. */
   bounties: number;
   lastAction: PlayerAction | null;
@@ -117,6 +123,11 @@ export interface RoomSettings {
   blindLevelMinutes: number;
   /** Bounty mode: knocking a player out earns a bounty badge. */
   bounty: boolean;
+  /**
+   * Host approves buy-ins: new players pick a buy-in and wait for the host to seat them, and
+   * re-buys / top-ups are requests the host approves. Virtual chips only.
+   */
+  hostApproval: boolean;
 }
 
 /** 'coach' = assisted plus a live win-chance meter for your own hand. */
@@ -152,6 +163,14 @@ export interface SideBetView {
 }
 
 export type ThrowItem = 'tomato' | 'rose' | 'beer' | 'chicken';
+
+export type ChipRequestKind = 'seat' | 'rebuy' | 'topup';
+
+export interface ChipRequest {
+  playerId: string;
+  kind: ChipRequestKind;
+  amount: number;
+}
 
 export interface ThrowEvent {
   id: string;
@@ -215,6 +234,8 @@ export interface GameStateSnapshot {
   allInRunoutFrom: number | null;
   /** Busted bots asking the host for permission to buy back in (player ids). */
   botRebuyRequests?: string[];
+  /** Host-approval rooms: open seat / re-buy / top-up requests. */
+  chipRequests?: ChipRequest[];
   /** Tournament progress (null when not a tournament). */
   tournament: TournamentInfo | null;
   /** Bounty mode: knockouts that happened in the hand that just finished. */

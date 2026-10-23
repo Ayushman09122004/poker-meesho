@@ -25,6 +25,12 @@ export interface EnginePlayer {
   botLevel: number;
   /** Chose to sit out: keeps the seat and chips but isn't dealt in. */
   sittingOut: boolean;
+  /** Host-approval rooms: joined but not seated until the host approves a buy-in. */
+  awaitingSeat: boolean;
+  /** Chips bought in this session (the ledger). */
+  buyInTotal: number;
+  /** Approved chips waiting for the current hand to finish. */
+  pendingChips: number;
 }
 
 export interface InternalPot {

@@ -105,7 +105,9 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
 
       const name = cleanName(payload.name);
       const playerId = generateId(10);
-      const add = room.engine.addPlayer(playerId, name, cleanAvatarSeed(payload.avatarSeed), room.engine.players.size === 0);
+      const firstIn = room.engine.players.size === 0;
+      const awaitingSeat = room.engine.settings.hostApproval && !firstIn;
+      const add = room.engine.addPlayer(playerId, name, cleanAvatarSeed(payload.avatarSeed), firstIn, undefined, { awaitingSeat });
       if (!add.ok) {
         ack?.({ ok: false, error: add.error });
         return;
@@ -126,6 +128,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       if (!room || !data.playerId) return;
       const name = room.engine.players.get(data.playerId)?.name;
       room.engine.removePlayer(data.playerId);
+      room.forgetChipRequest(data.playerId);
       room.removeReconnectData(data.playerId);
       socket.leave(room.code);
       if (name) room.systemChat(`${name} left the room.`);
@@ -220,6 +223,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       const targetSocketId = room.socketIdFor(target.id);
       room.engine.removePlayer(target.id);
       room.forgetBotRebuys(target.id);
+      room.forgetChipRequest(target.id);
       room.systemChat(`${target.name} was removed by the host.`);
       room.removeReconnectData(target.id);
       if (targetSocketId) {
@@ -288,6 +292,35 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       }
     });
 
+    socket.on(ClientEvents.RequestChips, (payload: { kind?: string; amount?: number }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      const kind = payload?.kind === 'seat' || payload?.kind === 'rebuy' || payload?.kind === 'topup' ? payload.kind : null;
+      if (!kind) return;
+      const error = room.requestChips(data.playerId, kind, Math.round(Number(payload?.amount)));
+      if (error) socket.emit(ServerEvents.RoomError, { message: error });
+    });
+
+    socket.on(ClientEvents.AnswerChipRequest, (payload: { targetPlayerId?: string; allow?: boolean }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      if (room.engine.hostId !== data.playerId) return;
+      const targetId = String(payload?.targetPlayerId ?? '');
+      const outcome = room.answerChipRequest(targetId, !!payload?.allow);
+      if (outcome === 'removeSeat') {
+        const target = room.engine.players.get(targetId);
+        const targetSocketId = room.socketIdFor(targetId);
+        room.engine.removePlayer(targetId);
+        room.removeReconnectData(targetId);
+        if (target) room.systemChat(`The host declined ${target.name}'s seat request.`);
+        if (targetSocketId) {
+          io.to(targetSocketId).emit(ServerEvents.Kicked, { reason: 'The host declined your seat request' });
+          io.sockets.sockets.get(targetSocketId)?.leave(room.code);
+        }
+        room.afterEngineMutation();
+      }
+    });
+
     socket.on(ClientEvents.AnswerBotRebuy, (payload: { targetPlayerId?: string; allow?: boolean }) => {
       const room = currentRoom();
       if (!room || !data.playerId) return;
@@ -299,6 +332,10 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
     socket.on(ClientEvents.Rebuy, () => {
       const room = currentRoom();
       if (!room || !data.playerId) return;
+      if (room.engine.settings.hostApproval) {
+        socket.emit(ServerEvents.RoomError, { message: 'Ask the host for a re-buy instead.' });
+        return;
+      }
       const result = room.engine.rebuy(data.playerId);
       if (result.ok) {
         const name = room.engine.players.get(data.playerId)?.name;

@@ -86,7 +86,14 @@ export class PokerEngine {
     return null;
   }
 
-  addPlayer(id: string, name: string, avatarSeed: string, isHost: boolean, bot?: { level: number }): { ok: boolean; error?: string } {
+  addPlayer(
+    id: string,
+    name: string,
+    avatarSeed: string,
+    isHost: boolean,
+    bot?: { level: number },
+    opts: { awaitingSeat?: boolean } = {},
+  ): { ok: boolean; error?: string } {
     if (this.players.has(id)) return { ok: true };
     if (this.players.size >= this.settings.maxPlayers) return { ok: false, error: 'Room is full' };
     const seatIndex = this.firstOpenSeat();
@@ -97,7 +104,7 @@ export class PokerEngine {
       name,
       avatarSeed,
       seatIndex,
-      chips: this.settings.startingChips,
+      chips: opts.awaitingSeat ? 0 : this.settings.startingChips,
       bet: 0,
       totalCommitted: 0,
       holeCards: [],
@@ -114,6 +121,9 @@ export class PokerEngine {
       isBot: !!bot,
       botLevel: bot ? bot.level : 0,
       sittingOut: false,
+      awaitingSeat: !!opts.awaitingSeat,
+      buyInTotal: opts.awaitingSeat ? 0 : this.settings.startingChips,
+      pendingChips: 0,
     };
     this.players.set(id, player);
     if (isHost) this.hostId = id;
@@ -161,7 +171,7 @@ export class PokerEngine {
 
   /** Seated, has chips, and hasn't chosen to sit out — gets dealt into the next hand. */
   private isDealable(p: EnginePlayer): boolean {
-    return p.status !== 'eliminated' && p.chips > 0 && !p.sittingOut;
+    return p.status !== 'eliminated' && p.chips > 0 && !p.sittingOut && !p.awaitingSeat;
   }
 
   activeSeatedPlayers(): EnginePlayer[] {
@@ -174,7 +184,9 @@ export class PokerEngine {
   }
 
   rebuy(playerId: string): { ok: boolean; error?: string } {
-    if (!this.settings.rebuyEnabled) return { ok: false, error: 'Rebuys are disabled for this room' };
+    if (!this.settings.rebuyEnabled && !(this.settings.hostApproval && !this.settings.tournament)) {
+      return { ok: false, error: 'Rebuys are disabled for this room' };
+    }
     const player = this.players.get(playerId);
     if (!player) return { ok: false, error: 'Player not found' };
     if (this.phase === 'hand_in_progress' && player.isInHand) {
@@ -182,9 +194,49 @@ export class PokerEngine {
     }
     if (player.chips > 0) return { ok: false, error: 'You still have chips' };
     player.chips = this.settings.startingChips;
+    player.buyInTotal += this.settings.startingChips;
     player.status = 'waiting';
     if (this.phase === 'game_over') this.phase = 'between_hands';
     return { ok: true };
+  }
+
+  /** Host-approval rooms: the host approved this player's buy-in — seat them with that many chips. */
+  seatPlayer(playerId: string, amount: number): { ok: boolean; error?: string } {
+    const p = this.players.get(playerId);
+    if (!p || !p.awaitingSeat) return { ok: false, error: 'Nobody waiting for that seat' };
+    p.awaitingSeat = false;
+    p.chips = amount;
+    p.buyInTotal += amount;
+    p.status = 'waiting';
+    this.reopenAfterGameOver();
+    return { ok: true };
+  }
+
+  /**
+   * Host-approval rooms: add approved chips (a re-buy or a top-up). Never changes a stack in the
+   * middle of a hand the player is in — those chips wait until the hand is over.
+   */
+  addChips(playerId: string, amount: number): { ok: boolean; error?: string } {
+    const p = this.players.get(playerId);
+    if (!p || p.awaitingSeat) return { ok: false, error: 'Player not found' };
+    if (this.phase === 'hand_in_progress' && p.isInHand) {
+      p.pendingChips += amount;
+      return { ok: true };
+    }
+    this.creditChips(p, amount);
+    this.reopenAfterGameOver();
+    return { ok: true };
+  }
+
+  private creditChips(p: EnginePlayer, amount: number): void {
+    p.chips += amount;
+    p.buyInTotal += amount;
+    if (p.status === 'eliminated') p.status = p.sittingOut ? 'sitting_out' : 'waiting';
+  }
+
+  /** A re-buy can bring a finished game back to life: there are players to deal to again. */
+  private reopenAfterGameOver(): void {
+    if (this.phase === 'game_over' && this.canStartHand()) this.phase = 'between_hands';
   }
 
   /** Resets every seated player's chips and starts a brand new game from scratch. */
@@ -213,7 +265,9 @@ export class PokerEngine {
     this.bounties.clear();
     this.lastBounties = [];
     for (const p of this.players.values()) {
-      p.chips = this.settings.startingChips;
+      p.chips = p.awaitingSeat ? 0 : this.settings.startingChips;
+      p.buyInTotal = p.chips;
+      p.pendingChips = 0;
       p.bet = 0;
       p.totalCommitted = 0;
       p.holeCards = [];
@@ -270,6 +324,8 @@ export class PokerEngine {
       if (this.isDealable(p)) {
         p.status = 'active';
         p.isInHand = true;
+      } else if (p.awaitingSeat) {
+        p.status = 'waiting';
       } else if (p.chips <= 0) {
         p.status = 'eliminated';
       } else if (p.sittingOut) {
@@ -837,7 +893,8 @@ export class PokerEngine {
     // Who got knocked out this hand (they had chips coming in, none now).
     const knockedOut = [...this.players.values()].filter((p) => p.chips <= 0 && p.status !== 'eliminated' && p.totalCommitted > 0);
     for (const p of this.players.values()) {
-      if (p.chips <= 0) {
+      // (Someone still waiting for the host to seat them has no chips yet — they're not out.)
+      if (p.chips <= 0 && !p.awaitingSeat) {
         p.status = 'eliminated';
       }
     }
@@ -863,6 +920,13 @@ export class PokerEngine {
     }
 
     this.phase = 'between_hands';
+
+    for (const p of this.players.values()) {
+      if (p.pendingChips > 0) {
+        this.creditChips(p, p.pendingChips);
+        p.pendingChips = 0;
+      }
+    }
 
     const remaining = this.activeSeatedPlayers().filter((p) => p.chips > 0);
     if (remaining.length <= 1) {
@@ -895,6 +959,9 @@ export class PokerEngine {
         isBot: p.isBot,
         botLevel: p.botLevel,
         sittingOut: p.sittingOut,
+        awaitingSeat: p.awaitingSeat,
+        buyInTotal: p.buyInTotal,
+        pendingChips: p.pendingChips,
         bounties: this.bounties.get(p.id) ?? 0,
         isReady: p.isReady,
         lastAction: p.lastAction,

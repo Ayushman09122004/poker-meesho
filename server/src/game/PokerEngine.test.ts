@@ -18,6 +18,7 @@ function makeSettings(overrides: Partial<RoomSettings> = {}): RoomSettings {
     tournament: false,
     blindLevelMinutes: 8,
     bounty: false,
+    hostApproval: false,
     ...overrides,
   };
 }

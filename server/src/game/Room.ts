@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
-import { ChatMessage, RoomSettings, ThrowEvent, ThrowItem } from '../../../shared/types';
+import { ChatMessage, ChipRequestKind, RoomSettings, ThrowEvent, ThrowItem } from '../../../shared/types';
+import { buyInOptions } from '../../../shared/buyIn';
 import { ServerEvents } from '../../../shared/events';
 import { runoutCardCount, showdownTimeline } from '../../../shared/showdownTiming';
 import { PokerEngine } from './PokerEngine';
@@ -33,6 +34,8 @@ export class Room {
   private pendingBotRebuys = new Set<string>();
   private declinedBotRebuys = new Set<string>();
   private sideBets = new SideBetBook();
+  /** Host-approval rooms: one open seat / re-buy / top-up request per player. */
+  private chipRequests = new Map<string, { kind: ChipRequestKind; amount: number }>();
   private throwLimiter = new ThrowLimiter();
   private lastBountyAnnounced = 0;
   private destroyed = false;
@@ -120,6 +123,7 @@ export class Room {
       if (!socketId) continue;
       const snapshot = this.engine.getSnapshot(player.id);
       snapshot.botRebuyRequests = [...this.pendingBotRebuys];
+      snapshot.chipRequests = [...this.chipRequests].map(([playerId, r]) => ({ playerId, ...r }));
       snapshot.sideBet = this.sideBets.view(player.id, this.engine);
       snapshot.throwsLeft = this.throwLimiter.remaining(player.id);
       this.io.to(socketId).emit(ServerEvents.StateUpdate, snapshot);
@@ -254,7 +258,8 @@ export class Room {
    * a refused bot sits out until the host lets it back in from Host Controls.
    */
   private askBotRebuys(): boolean {
-    if (!this.engine.settings.rebuyEnabled) return false;
+    const s = this.engine.settings;
+    if (!s.rebuyEnabled && !(s.hostApproval && !s.tournament)) return false;
     let asked = false;
     for (const p of this.engine.players.values()) {
       if (!p.isBot || p.chips > 0 || this.pendingBotRebuys.has(p.id) || this.declinedBotRebuys.has(p.id)) continue;
@@ -279,6 +284,63 @@ export class Room {
     this.declinedBotRebuys.delete(botId);
     if (this.engine.rebuy(botId).ok) this.systemChat(`The host let 🤖 ${bot.name} buy back in.`);
     this.afterEngineMutation();
+  }
+
+  // ---------- Host-approval buy-ins ----------
+
+  /**
+   * A player asks for chips: a seat (just joined), a re-buy (out of chips) or a top-up. The amount
+   * must be one of the allowed buy-ins. Returns an error message when the request isn't allowed.
+   */
+  requestChips(playerId: string, kind: ChipRequestKind, amount: number): string | null {
+    const s = this.engine.settings;
+    const p = this.engine.players.get(playerId);
+    if (!s.hostApproval) return 'This table does not use buy-in requests.';
+    if (!p || p.isBot) return 'Player not found.';
+    if (!buyInOptions(s.startingChips, s.tournament).includes(amount)) return 'Pick one of the buy-in amounts.';
+    if (kind === 'seat' && !p.awaitingSeat) return 'You already have a seat.';
+    if (kind !== 'seat' && p.awaitingSeat) return 'Ask for a seat first.';
+    if (kind !== 'seat' && s.tournament) return 'No re-buys or top-ups in a tournament.';
+    if (kind === 'rebuy' && (p.chips > 0 || p.pendingChips > 0)) return 'You still have chips — use a top-up instead.';
+    this.chipRequests.set(playerId, { kind, amount });
+    const what = kind === 'seat' ? 'a seat' : kind === 'rebuy' ? 'a re-buy' : 'a top-up';
+    this.systemChat(`🙋 ${p.name} asks the host for ${what} of ${amount.toLocaleString()} chips.`);
+    this.broadcastState();
+    return null;
+  }
+
+  /**
+   * The host answers a request. Approving gives the chips (a top-up during a hand the player is in
+   * lands when the hand ends). Declining a seat request means that player leaves the table —
+   * returns 'removeSeat' so the socket layer can send them off.
+   */
+  answerChipRequest(playerId: string, allow: boolean): 'removeSeat' | null {
+    const req = this.chipRequests.get(playerId);
+    const p = this.engine.players.get(playerId);
+    this.chipRequests.delete(playerId);
+    if (!req || !p) {
+      this.broadcastState();
+      return null;
+    }
+    if (!allow) {
+      if (req.kind === 'seat') return 'removeSeat';
+      this.systemChat(`The host declined ${p.name}'s ${req.kind === 'rebuy' ? 're-buy' : 'top-up'}.`);
+      this.broadcastState();
+      return null;
+    }
+    const result = req.kind === 'seat' ? this.engine.seatPlayer(playerId, req.amount) : this.engine.addChips(playerId, req.amount);
+    if (result.ok) {
+      const later = this.engine.players.get(playerId)!.pendingChips > 0 ? ' (added after this hand)' : '';
+      const verb = req.kind === 'seat' ? 'seated' : req.kind === 'rebuy' ? 'approved the re-buy for' : 'approved the top-up for';
+      this.systemChat(`✅ The host ${verb} ${p.name} — ${req.amount.toLocaleString()} chips${later}.`);
+    }
+    this.afterEngineMutation();
+    return null;
+  }
+
+  forgetChipRequest(playerId?: string): void {
+    if (playerId) this.chipRequests.delete(playerId);
+    else for (const [id, r] of this.chipRequests) if (r.kind !== 'seat') this.chipRequests.delete(id);
   }
 
   // ---------- Side bets & throwables ----------
@@ -329,6 +391,8 @@ export class Room {
   /** Fresh session after the host restarts: clear requests and side-bet scores. */
   onRestart(): void {
     this.forgetBotRebuys();
+    // Everyone is back to a fresh stack, so re-buys/top-ups are moot; seat requests still stand.
+    this.forgetChipRequest();
     this.sideBets.reset();
   }
 

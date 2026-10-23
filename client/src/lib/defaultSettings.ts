@@ -16,5 +16,6 @@ export function defaultClientSettings(): Partial<RoomSettings> {
     tournament: false,
     blindLevelMinutes: 8,
     bounty: false,
+    hostApproval: false,
   };
 }

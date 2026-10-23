@@ -12,6 +12,8 @@ export const ClientEvents = {
   AddBot: 'host:addBot',
   SetBotLevel: 'host:setBotLevel',
   AnswerBotRebuy: 'host:answerBotRebuy',
+  RequestChips: 'player:requestChips',
+  AnswerChipRequest: 'host:answerChipRequest',
   SetSittingOut: 'player:setSittingOut',
   SideBetPick: 'player:sideBetPick',
   Throw: 'player:throw',

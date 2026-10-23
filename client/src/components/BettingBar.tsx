@@ -15,13 +15,15 @@ interface BettingBarProps {
   snapshot: GameStateSnapshot;
   self: PublicPlayer | undefined;
   isHost: boolean;
+  /** Host-approval tables: open the re-buy request picker. */
+  onRebuyRequest?: () => void;
 }
 
 /**
  * Full-width bar along the bottom of the table. On your turn: Fold / Check-or-Call / Raise (raise
  * opens a sizing panel). While waiting in a hand: pre-action toggles. Otherwise: a status line.
  */
-export function BettingBar({ snapshot, self, isHost }: BettingBarProps) {
+export function BettingBar({ snapshot, self, isHost, onRebuyRequest }: BettingBarProps) {
   const legal = snapshot.legalActionsForViewer;
   const isMyTurn = !!self && snapshot.currentTurnPlayerId === self.id && !!legal;
   const inHandWaiting =
@@ -126,7 +128,7 @@ export function BettingBar({ snapshot, self, isHost }: BettingBarProps) {
             <PreToggle label="Call any" on={pre === 'call_any'} onClick={() => setPre(pre === 'call_any' ? null : 'call_any')} />
           </>
         ) : (
-          <StatusLine snapshot={snapshot} self={self} isHost={isHost} />
+          <StatusLine snapshot={snapshot} self={self} isHost={isHost} onRebuyRequest={onRebuyRequest} />
         )}
       </div>
       </div>
@@ -134,7 +136,17 @@ export function BettingBar({ snapshot, self, isHost }: BettingBarProps) {
   );
 }
 
-function StatusLine({ snapshot, self, isHost }: { snapshot: GameStateSnapshot; self: PublicPlayer | undefined; isHost: boolean }) {
+function StatusLine({
+  snapshot,
+  self,
+  isHost,
+  onRebuyRequest,
+}: {
+  snapshot: GameStateSnapshot;
+  self: PublicPlayer | undefined;
+  isHost: boolean;
+  onRebuyRequest?: () => void;
+}) {
   // Don't give the result away while the showdown is still playing out on the table.
   const seq = useShowdownSequence(snapshot);
   const revealing = seq.ended && !seq.awarded;
@@ -144,7 +156,8 @@ function StatusLine({ snapshot, self, isHost }: { snapshot: GameStateSnapshot; s
   } else if (snapshot.phase === 'game_over') {
     const champ = snapshot.players.find((p) => p.chips > 0)?.name ?? 'A player';
     text = `🏆 ${champ} takes the whole table!${isHost ? ' Open host controls to restart.' : ''}`;
-  } else if (self?.status === 'eliminated') text = "You're out of chips — spectating.";
+  } else if (self?.awaitingSeat) text = '⏳ Waiting for the host to approve your buy-in.';
+  else if (self?.status === 'eliminated') text = "You're out of chips — spectating.";
   else if (self?.sittingOut && !self.hasCards) text = "☕ You're sitting out — press “I'm back” (top right) to be dealt in.";
   else if (self?.status === 'folded') text = 'You folded — watching this hand.';
   else if (self?.status === 'all_in') text = "You're all-in — good luck!";
@@ -153,7 +166,19 @@ function StatusLine({ snapshot, self, isHost }: { snapshot: GameStateSnapshot; s
   return (
     <div className="flex-1 flex items-center justify-center gap-3 text-sm text-slate-300">
       <span className="truncate">{text}</span>
-      {!revealing && self?.status === 'eliminated' && snapshot.settings.rebuyEnabled && (
+      {!revealing && self?.status === 'eliminated' && snapshot.settings.hostApproval && !snapshot.settings.tournament && (
+        snapshot.chipRequests?.some((r) => r.playerId === self.id) ? (
+          <span className="shrink-0 text-amber-300 font-semibold">⏳ Re-buy asked — waiting for the host</span>
+        ) : (
+          <button
+            onClick={onRebuyRequest}
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-gold text-ink-950 text-sm font-semibold hover:brightness-110 transition"
+          >
+            Ask to buy back in
+          </button>
+        )
+      )}
+      {!revealing && self?.status === 'eliminated' && snapshot.settings.rebuyEnabled && !snapshot.settings.hostApproval && (
         <button
           onClick={requestRebuy}
           className="shrink-0 px-3 py-1.5 rounded-lg bg-gold text-ink-950 text-sm font-semibold hover:brightness-110 transition"

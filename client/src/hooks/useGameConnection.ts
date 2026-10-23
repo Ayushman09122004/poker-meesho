@@ -142,6 +142,14 @@ export function setBotLevel(targetPlayerId: string, level: number): void {
   socket.emit(ClientEvents.SetBotLevel, { targetPlayerId, level });
 }
 
+export function requestChips(kind: 'seat' | 'rebuy' | 'topup', amount: number): void {
+  socket.emit(ClientEvents.RequestChips, { kind, amount });
+}
+
+export function answerChipRequest(targetPlayerId: string, allow: boolean): void {
+  socket.emit(ClientEvents.AnswerChipRequest, { targetPlayerId, allow });
+}
+
 export function answerBotRebuy(targetPlayerId: string, allow: boolean): void {
   socket.emit(ClientEvents.AnswerBotRebuy, { targetPlayerId, allow });
 }
