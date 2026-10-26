@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import { ChatMessage, GameStateSnapshot, ThrowEvent } from '../../../shared/types';
+import { ChatMessage, GameStateSnapshot, MemeEvent, ThrowEvent } from '../../../shared/types';
+
+export interface EntranceEvent {
+  id: string;
+  playerId: string;
+  name: string;
+  avatarSeed: string;
+}
 
 export interface EmoteEvent {
   id: string;
@@ -28,6 +35,10 @@ interface GameStore {
   emotes: EmoteEvent[];
   /** Tomatoes, roses, beers and chickens currently flying across the table. */
   throws: ThrowEvent[];
+  /** Memes cashed in, waiting to play / playing (first one is on screen). */
+  memes: MemeEvent[];
+  /** Character entrances waiting to play (first one is on screen). */
+  entrances: EntranceEvent[];
   toasts: Toast[];
   muted: boolean;
   showHostSettings: boolean;
@@ -41,6 +52,10 @@ interface GameStore {
   setSnapshot: (s: GameStateSnapshot) => void;
   pushChat: (m: ChatMessage) => void;
   pushThrow: (t: ThrowEvent) => void;
+  pushMeme: (m: MemeEvent) => void;
+  shiftMeme: (id: string) => void;
+  pushEntrance: (e: EntranceEvent) => void;
+  shiftEntrance: (id: string) => void;
   pushEmote: (playerId: string, emoji: string) => void;
   expireEmote: (id: string) => void;
   pushToast: (text: string, tone?: Toast['tone']) => void;
@@ -70,6 +85,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   chat: [],
   emotes: [],
   throws: [],
+  memes: [],
+  entrances: [],
   toasts: [],
   muted: false,
   showHostSettings: false,
@@ -94,6 +111,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     setTimeout(() => get().expireEmote(id), 2600);
   },
   expireEmote: (id) => set((state) => ({ emotes: state.emotes.filter((e) => e.id !== id) })),
+  pushMeme: (m) => set((state) => ({ memes: [...state.memes, m].slice(-5) })),
+  shiftMeme: (id) => set((state) => ({ memes: state.memes.filter((m) => m.id !== id) })),
+  pushEntrance: (e) => set((state) => ({ entrances: [...state.entrances, e].slice(-4) })),
+  shiftEntrance: (id) => set((state) => ({ entrances: state.entrances.filter((e) => e.id !== id) })),
   pushThrow: (t) => {
     set((state) => ({ throws: [...state.throws, t].slice(-12) }));
     setTimeout(() => set((state) => ({ throws: state.throws.filter((x) => x.id !== t.id) })), 2600);
@@ -120,5 +141,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       chat: [],
       emotes: [],
       throws: [],
+      memes: [],
+      entrances: [],
     }),
 }));

@@ -248,6 +248,26 @@ class SoundManager {
     audio.play().catch(() => {});
   }
 
+  private effect: HTMLAudioElement | null = null;
+
+  /** A one-off sound effect (meme sounds) on its own channel — never cuts off a voice. */
+  playEffect(url: string) {
+    const ctx = this.ensureCtx();
+    if (!ctx || !this.masterGain) return;
+    this.effect?.pause();
+    const audio = new Audio(url);
+    try {
+      const gain = ctx.createGain();
+      gain.gain.value = 1.6;
+      ctx.createMediaElementSource(audio).connect(gain);
+      gain.connect(this.masterGain);
+    } catch {
+      return;
+    }
+    this.effect = audio;
+    audio.play().catch(() => {});
+  }
+
   /** Throwables: a quick whoosh as the item flies… */
   throwWhoosh() {
     this.noiseBurst(0.35, { bandpassFreq: 1800, gain: 0.18 });

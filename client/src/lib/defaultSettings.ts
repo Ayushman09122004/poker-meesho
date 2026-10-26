@@ -17,5 +17,6 @@ export function defaultClientSettings(): Partial<RoomSettings> {
     blindLevelMinutes: 8,
     bounty: false,
     hostApproval: false,
+    runItTwice: false,
   };
 }

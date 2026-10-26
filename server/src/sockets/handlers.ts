@@ -121,6 +121,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       room.systemChat(`${name} joined the room.`);
       ack?.(joinResult(room.code, playerId, token));
       room.broadcastState();
+      if (!awaitingSeat) room.announceEntrance(playerId);
     });
 
     socket.on(ClientEvents.LeaveRoom, () => {
@@ -242,7 +243,8 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       }
       const level = clampBotLevel(payload?.level);
       const name = cleanName(payload?.name || 'Bot');
-      const add = room.engine.addPlayer(generateId(10), name, cleanAvatarSeed(payload?.avatarSeed), false, { level });
+      const botId = generateId(10);
+      const add = room.engine.addPlayer(botId, name, cleanAvatarSeed(payload?.avatarSeed), false, { level });
       if (!add.ok) {
         socket.emit(ServerEvents.RoomError, { message: add.error ?? 'Could not add bot' });
         return;
@@ -250,6 +252,7 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
       room.touch();
       room.systemChat(`🤖 ${name} (${BOT_LEVEL_NAMES[level]}) sat down.`);
       room.afterEngineMutation();
+      room.announceEntrance(botId);
     });
 
     socket.on(ClientEvents.SetBotLevel, (payload: { targetPlayerId?: string; level?: number }) => {
@@ -319,6 +322,20 @@ export function registerSocketHandlers(io: Server, rooms: RoomManager): void {
         }
         room.afterEngineMutation();
       }
+    });
+
+    socket.on(ClientEvents.ShowCards, (payload: { which?: unknown }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      const which = payload?.which === 0 || payload?.which === 1 ? payload.which : 'both';
+      room.showCards(data.playerId, which);
+    });
+
+    socket.on(ClientEvents.PlayMeme, (payload: { memeId?: unknown }) => {
+      const room = currentRoom();
+      if (!room || !data.playerId) return;
+      const error = room.playMeme(data.playerId, String(payload?.memeId ?? ''));
+      if (error) socket.emit(ServerEvents.RoomError, { message: error });
     });
 
     socket.on(ClientEvents.AnswerBotRebuy, (payload: { targetPlayerId?: string; allow?: boolean }) => {

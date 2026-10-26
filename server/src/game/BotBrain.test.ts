@@ -20,6 +20,7 @@ function makeSettings(overrides: Partial<RoomSettings> = {}): RoomSettings {
     blindLevelMinutes: 8,
     bounty: false,
     hostApproval: false,
+    runItTwice: false,
     ...overrides,
   };
 }

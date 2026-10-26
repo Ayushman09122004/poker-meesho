@@ -1,3 +1,4 @@
+import { EntranceBanner, MemeOverlay } from './components/FunExtras';
 import { useEffect, useState } from 'react';
 import { useGameConnection, joinRoom } from './hooks/useGameConnection';
 import { useSoundEffects } from './hooks/useSoundEffects';
@@ -28,6 +29,8 @@ export default function App() {
   return (
     <div className="w-screen h-screen">
       <Toasts />
+      <EntranceBanner />
+      <MemeOverlay />
       {reconnecting && screen === 'landing' ? (
         <div className="w-full h-full flex items-center justify-center bg-ink-950">
           <p className="text-slate-400 animate-pulse">Reconnecting to your table…</p>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { GameStateSnapshot, LegalActions, PublicPlayer } from '../../../shared/types';
-import { requestRebuy, sendPlayerAction, useTimeBankAction } from '../hooks/useGameConnection';
+import { Card, GameStateSnapshot, LegalActions, PublicPlayer } from '../../../shared/types';
+import { requestRebuy, sendPlayerAction, showMyCards, useTimeBankAction } from '../hooks/useGameConnection';
 import { formatChips } from './Chips';
 import { sound } from '../lib/sound';
 import { useShowdownSequence } from '../hooks/useShowdownSequence';
@@ -166,6 +166,7 @@ function StatusLine({
   return (
     <div className="flex-1 flex items-center justify-center gap-3 text-sm text-slate-300">
       <span className="truncate">{text}</span>
+      {!revealing && self && <ShowCardsControls snapshot={snapshot} self={self} />}
       {!revealing && self?.status === 'eliminated' && snapshot.settings.hostApproval && !snapshot.settings.tournament && (
         snapshot.chipRequests?.some((r) => r.playerId === self.id) ? (
           <span className="shrink-0 text-amber-300 font-semibold">⏳ Re-buy asked — waiting for the host</span>
@@ -186,6 +187,50 @@ function StatusLine({
           Buy back in
         </button>
       )}
+    </div>
+  );
+}
+
+const SUIT_SYMBOL: Record<Card['suit'], string> = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' };
+const cardLabel = (c: Card) => `${c.rank === 'T' ? '10' : c.rank}${SUIT_SYMBOL[c.suit]}`;
+
+/**
+ * After you fold, or once the hand is over, show your cards to the table — one or both. Asked
+ * after folding, they're revealed when the hand ends (never while it's still being played).
+ */
+function ShowCardsControls({ snapshot, self }: { snapshot: GameStateSnapshot; self: PublicPlayer }) {
+  const cards = self.holeCards;
+  const handOver = snapshot.phase !== 'hand_in_progress';
+  if (!cards || cards.length !== 2 || (!handOver && self.status !== 'folded')) return null;
+  // Already face up for everyone at a real showdown.
+  const atShowdown = (snapshot.showdown?.length ?? 0) > 1 && snapshot.showdown!.some((s) => s.playerId === self.id && s.hand);
+  if (atShowdown) return null;
+  const req = self.showRequested ?? [false, false];
+  if (req[0] && req[1]) {
+    return <span className="shrink-0 text-sky-300 font-semibold">{handOver ? '👀 Cards shown' : '👀 Showing when the hand ends'}</span>;
+  }
+  const btn = 'shrink-0 px-3 py-1.5 rounded-lg border border-sky-300/40 bg-sky-900/60 text-sky-100 text-sm font-semibold hover:bg-sky-800 transition';
+  const show = (which: 0 | 1 | 'both') => {
+    sound.uiClick();
+    showMyCards(which);
+  };
+  return (
+    <div className="shrink-0 flex items-center gap-1.5">
+      <span className="text-slate-400 text-xs">👀 Show:</span>
+      {[0, 1].map((i) =>
+        req[i] ? (
+          <span key={i} className="text-sky-300 text-sm font-semibold px-1">
+            {cardLabel(cards[i])} ✓
+          </span>
+        ) : (
+          <button key={i} className={btn} onClick={() => show(i as 0 | 1)}>
+            {cardLabel(cards[i])}
+          </button>
+        ),
+      )}
+      <button className={btn} onClick={() => show('both')}>
+        Both
+      </button>
     </div>
   );
 }

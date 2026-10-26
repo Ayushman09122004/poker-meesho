@@ -52,6 +52,12 @@ export class PokerEngine {
   handHistory: HandHistoryEntry[] = [];
   revealedRunoutFrom: number | null = null;
   allInRunoutFrom: number | null = null;
+  /** Run it twice: board index the second run starts from (null = run once). */
+  private runTwiceFrom: number | null = null;
+  /** Run it twice: the second board, once dealt. */
+  secondBoard: Card[] | null = null;
+  /** Which hole cards each player asked to show; revealed only once the hand is over. */
+  private shown = new Map<string, [boolean, boolean]>();
 
   // Tournament mode: blind level + when it started, and the knock-out order (for the podium).
   blindLevel = 1;
@@ -169,6 +175,21 @@ export class PokerEngine {
     if (sittingOut && !p.isInHand && p.status !== 'eliminated') p.status = 'sitting_out';
   }
 
+  /**
+   * Show one or both of your hole cards to the table. Can be asked any time you hold cards (e.g.
+   * right after folding), but nothing is revealed until the hand is over — so it never gives away
+   * information while the hand is still being played.
+   */
+  showCards(id: string, which: 0 | 1 | 'both'): boolean {
+    const p = this.players.get(id);
+    if (!p || p.holeCards.length !== 2) return false;
+    const cur = this.shown.get(id) ?? [false, false];
+    const next: [boolean, boolean] = which === 'both' ? [true, true] : which === 0 ? [true, cur[1]] : [cur[0], true];
+    if (next[0] === cur[0] && next[1] === cur[1]) return false;
+    this.shown.set(id, next);
+    return true;
+  }
+
   /** Seated, has chips, and hasn't chosen to sit out — gets dealt into the next hand. */
   private isDealable(p: EnginePlayer): boolean {
     return p.status !== 'eliminated' && p.chips > 0 && !p.sittingOut && !p.awaitingSeat;
@@ -264,6 +285,9 @@ export class PokerEngine {
     this.eliminationOrder = [];
     this.bounties.clear();
     this.lastBounties = [];
+    this.runTwiceFrom = null;
+    this.secondBoard = null;
+    this.shown.clear();
     for (const p of this.players.values()) {
       p.chips = p.awaitingSeat ? 0 : this.settings.startingChips;
       p.buyInTotal = p.chips;
@@ -368,6 +392,9 @@ export class PokerEngine {
     this.lastWinners = null;
     this.revealedRunoutFrom = null;
     this.allInRunoutFrom = null;
+    this.runTwiceFrom = null;
+    this.secondBoard = null;
+    this.shown.clear();
 
     // Post blinds
     this.postBlind(this.playerAtSeat(this.sbSeat)!, this.settings.smallBlind);
@@ -654,7 +681,11 @@ export class PokerEngine {
     if (canStillAct.length <= 1) {
       // No more betting possible: run the board out completely, then showdown.
       this.setCurrentTurn(null);
-      if (this.street !== 'river') this.allInRunoutFrom = this.communityCards.length;
+      if (this.street !== 'river') {
+        this.allInRunoutFrom = this.communityCards.length;
+        // Heads-up all-in with cards still to come: deal the rest twice (if the table plays that way).
+        if (this.settings.runItTwice && this.playersStillInHand().length === 2) this.runTwiceFrom = this.communityCards.length;
+      }
       while (this.street !== 'river') {
         this.dealNextStreetCards();
       }
@@ -786,11 +817,44 @@ export class PokerEngine {
     for (const p of this.players.values()) p.bet = 0;
     const contenders = this.playersStillInHand();
 
-    const handByPlayer = new Map<string, ReturnType<typeof evaluateHand>>();
-    for (const p of contenders) {
-      handByPlayer.set(p.id, evaluateHand([...p.holeCards, ...this.communityCards]));
+    const handsOn = (board: Card[]) => {
+      const m = new Map<string, ReturnType<typeof evaluateHand>>();
+      for (const p of contenders) m.set(p.id, evaluateHand([...p.holeCards, ...board]));
+      return m;
+    };
+    const handByPlayer = handsOn(this.communityCards);
+
+    let winnings: Map<string, number>;
+    let winnerAnnouncements: WinnerAnnouncement[];
+    if (this.runTwiceFrom !== null && this.deck) {
+      // Run it twice: a second board shares the cards dealt before the all-in, then half of every
+      // pot is played on each board (the odd chip goes to the first run).
+      const from = this.runTwiceFrom;
+      this.secondBoard = [...this.communityCards.slice(0, from), ...this.deck.draw(5 - from)];
+      const first = this.awardPots(pots.map((p) => ({ ...p, amount: Math.ceil(p.amount / 2) })), handByPlayer);
+      const second = this.awardPots(pots.map((p) => ({ ...p, amount: Math.floor(p.amount / 2) })), handsOn(this.secondBoard));
+      winnings = new Map(first.winnings);
+      for (const [id, v] of second.winnings) winnings.set(id, (winnings.get(id) ?? 0) + v);
+      winnerAnnouncements = [...first.announcements.map((w) => ({ ...w, run: 1 as const })), ...second.announcements.map((w) => ({ ...w, run: 2 as const }))];
+    } else {
+      ({ winnings, announcements: winnerAnnouncements } = this.awardPots(pots, handByPlayer));
     }
 
+    const showdown: ShowdownEntry[] = contenders.map((p) => {
+      const won = winnings.get(p.id) ?? 0;
+      return {
+        playerId: p.id,
+        holeCards: p.holeCards,
+        hand: handByPlayer.get(p.id) ?? null,
+        won,
+        isWinner: won > 0,
+      };
+    });
+    this.applyShowdownResults(pots, winnings, handByPlayer, showdown, winnerAnnouncements);
+  }
+
+  /** Splits each pot among the best hands eligible for it (ties split, odd chips left of the button). */
+  private awardPots(pots: InternalPot[], handByPlayer: Map<string, ReturnType<typeof evaluateHand>>) {
     const winnings = new Map<string, number>();
     const winnerAnnouncements: WinnerAnnouncement[] = [];
 
@@ -834,19 +898,16 @@ export class PokerEngine {
         });
       }
     });
+    return { winnings, announcements: winnerAnnouncements };
+  }
 
-    const showdown: ShowdownEntry[] = contenders.map((p) => {
-      const won = winnings.get(p.id) ?? 0;
-      return {
-        playerId: p.id,
-        holeCards: p.holeCards,
-        hand: handByPlayer.get(p.id) ?? null,
-        won,
-        isWinner: won > 0,
-      };
-    });
-
-    const totalPot = pots.reduce((s, p) => s + p.amount, 0);
+  private applyShowdownResults(
+    pots: InternalPot[],
+    winnings: Map<string, number>,
+    handByPlayer: Map<string, ReturnType<typeof evaluateHand>>,
+    showdown: ShowdownEntry[],
+    winnerAnnouncements: WinnerAnnouncement[],
+  ): void {
     for (const p of this.players.values()) {
       const won = winnings.get(p.id) ?? 0;
       p.chips += won;
@@ -942,8 +1003,11 @@ export class PokerEngine {
     for (const p of this.players.values()) seats[p.seatIndex].playerId = p.id;
 
     const showRevealed = this.street === 'showdown';
+    const handOver = this.phase !== 'hand_in_progress';
     const players: PublicPlayer[] = [...this.players.values()].map((p) => {
       const revealToViewer = p.id === viewerId || (showRevealed && p.isInHand);
+      const shown = this.shown.get(p.id);
+      const shownCards = handOver && shown && p.holeCards.length === 2 ? p.holeCards.map((c, i) => (shown[i] ? c : null)) : null;
       return {
         id: p.id,
         name: p.name,
@@ -966,6 +1030,8 @@ export class PokerEngine {
         isReady: p.isReady,
         lastAction: p.lastAction,
         holeCards: revealToViewer ? p.holeCards : null,
+        shownCards,
+        ...(p.id === viewerId && shown ? { showRequested: shown } : {}),
         timeBankMs: p.timeBankMs,
         stats: p.stats,
       };
@@ -999,6 +1065,7 @@ export class PokerEngine {
       handHistory: this.handHistory,
       revealedRunoutFrom: this.revealedRunoutFrom,
       allInRunoutFrom: this.allInRunoutFrom,
+      secondBoard: this.secondBoard,
       tournament: this.settings.tournament
         ? {
             level: this.blindLevel,

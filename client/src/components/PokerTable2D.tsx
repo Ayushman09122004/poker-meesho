@@ -17,6 +17,7 @@ import { BigMoments, computeMoments } from './BigMoments';
 import { sound } from '../lib/sound';
 import { botLevelInfo } from './BotControls';
 import { ThrowFlight, ThrowMenu } from './Throwables';
+import { TicketBadge } from './FunExtras';
 import { CoachMeter, RivalryBanner, useRivalry, useWinChance } from './TableExtras';
 import { useGameStore } from '../store/gameStore';
 
@@ -255,6 +256,7 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
 
   // Throwables: whose avatar was clicked (menu open), and where avatars are (flight targets).
   const throws = useGameStore((s) => s.throws);
+  const twoRuns = !!snapshot.secondBoard && seq.ended;
   const [throwTarget, setThrowTarget] = useState<string | null>(null);
   const avatarPoint = (seatIndex: number) => {
     const g = geometryFor(seatIndex);
@@ -278,9 +280,14 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
         {/* Pot */}
         <div className="absolute z-10" style={{ left: potPos.x, top: potPos.y, transform: `translate(-50%, -50%) scale(${boardBoost})` }}>
           <AnimatePresence>
-            {potAmount > 0 && (
+            {potAmount > 0 && !(twoRuns && seq.highlight) && (
               <motion.div key="pot" initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }}>
                 <ChipPile amount={potAmount} size={38} label={`Pot ${formatChips(potAmount)}`} />
+              </motion.div>
+            )}
+            {twoRuns && seq.highlight && (
+              <motion.div key="runs" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
+                <RunResults snapshot={snapshot} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -310,10 +317,30 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
           })}
         </div>
 
+        {/* Run it twice: the second board, dealt after the first */}
+        {twoRuns && (
+          <div
+            className="absolute z-10 flex items-center gap-2"
+            style={{ left: center.x, top: center.y + boardCardH / 2 + 8 * boardBoost, transform: `translateX(-50%) scale(${boardBoost * SECOND_BOARD_SCALE})`, transformOrigin: 'top center' }}
+          >
+            <span className="px-2 py-1 rounded-md bg-sky-600 text-white font-display font-extrabold text-[13px] tracking-wider">RUN 2</span>
+            {Array.from({ length: 5 }).map((_, i) => {
+              const card = i < seq.secondBoardVisible ? snapshot.secondBoard![i] : undefined;
+              if (!card) return <CardSlot key={`slot2-${i}`} size={boardSize} />;
+              return <PlayingCard key={`c2-${snapshot.handNumber}-${i}-${cardKey(card)}`} card={card} size={boardSize} />;
+            })}
+          </div>
+        )}
+
         {/* Hand label under the board: your hand (assisted) during play, the winning hand at showdown */}
         <div
           className="absolute z-10 flex flex-col items-center gap-1.5"
-          style={{ left: center.x, top: center.y + boardCardH / 2 + 12 * boardBoost, transform: `translateX(-50%) scale(${boardBoost})`, transformOrigin: 'top center' }}
+          style={{
+            left: center.x,
+            top: center.y + boardCardH / 2 + 12 * boardBoost,
+            transform: `translateX(-50%) scale(${boardBoost})`,
+            transformOrigin: 'top center',
+          }}
         >
           <AnimatePresence mode="wait">
             {showLabel && (
@@ -324,7 +351,7 @@ export function PokerTable2D({ snapshot, selfPlayerId, hint, emotes }: PokerTabl
                 exit={{ opacity: 0 }}
                 className="flex flex-col items-center gap-1"
               >
-                {seq.ended ? (
+                {seq.ended && twoRuns ? null : seq.ended ? (
                   <>
                     {seq.winningHandName && (
                       <span className="px-4 py-1 rounded-md bg-ink-950/80 text-white font-display font-bold tracking-wide uppercase text-[17px] whitespace-nowrap border border-gold/50 shadow-glow">
@@ -569,6 +596,9 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote, onPickTar
   const hasCards = p.holeCards ? p.holeCards.length > 0 : p.hasCards;
   const revealed = !isSelf && seq.ended && !!p.holeCards && seq.isRevealed(p.id);
   const showdownHand = revealed ? seq.handNameFor.get(p.id) : undefined;
+  // Cards this player chose to show after the hand (once the end-of-hand sequence has played).
+  const shown = !isSelf && !revealed && p.shownCards && (seq.awarded || !seq.ended) ? p.shownCards : null;
+  const faceUp = revealed || !!shown;
   const loserAtShowdown = seq.highlight && seq.winningKeys.size > 0 && !won;
 
   const cardHighlighted = (key: string) =>
@@ -587,9 +617,9 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote, onPickTar
         })();
 
   const opponentCards =
-    !isSelf && hasCards ? (
+    !isSelf && (hasCards || shown) ? (
       <div
-        className={`absolute flex ${revealed ? 'z-20' : 'z-0'}`}
+        className={`absolute flex ${faceUp ? 'z-20' : 'z-0'}`}
         style={{
           left: '50%',
           top: avatarSize / 2 + 6,
@@ -597,21 +627,26 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote, onPickTar
         }}
       >
         {[0, 1].map((i) => {
-          const card = revealed ? p.holeCards?.[i] ?? null : null;
+          const card = revealed ? p.holeCards?.[i] ?? null : shown?.[i] ?? null;
           return (
-            <div key={i} style={{ transform: `rotate(${i === 0 ? -7 : 7}deg)`, marginLeft: i === 1 ? (revealed ? -14 : -26) : 0 }}>
+            <div key={i} style={{ transform: `rotate(${i === 0 ? -7 : 7}deg)`, marginLeft: i === 1 ? (faceUp ? -14 : -26) : 0 }}>
               <PlayingCard
-                key={`h-${snapshot.handNumber}-${p.id}-${i}`}
+                key={`h-${snapshot.handNumber}-${p.id}-${i}-${card ? 'up' : 'down'}`}
                 card={card}
                 faceDown={!card}
-                size={revealed ? 'md' : 'sm'}
+                size={faceUp ? 'md' : 'sm'}
                 delay={i * 0.08}
-                dimmed={folded || loserAtShowdown}
+                dimmed={(folded || loserAtShowdown) && !shown}
                 highlighted={!!card && cardHighlighted(cardKey(card))}
               />
             </div>
           );
         })}
+        {shown && (
+          <span className="absolute left-1/2 -bottom-4 -translate-x-1/2 px-2 py-0.5 rounded-full bg-sky-600 text-white text-[11px] font-bold whitespace-nowrap shadow">
+            👀 Shown
+          </span>
+        )}
       </div>
     ) : null;
 
@@ -720,6 +755,7 @@ function SeatPod({ player: p, snapshot, isSelf, seq, hint, dir, emote, onPickTar
               🔥{p.stats.currentWinStreak}
             </span>
           )}
+          <TicketBadge count={snapshot.memeTickets?.[p.id]?.length ?? 0} />
           {p.bounties > 0 && (
             <span
               className="absolute -left-1 bottom-1 z-10 text-[12px] font-extrabold px-1.5 py-0.5 rounded-full bg-gradient-to-b from-rose-500 to-rose-700 text-white border-2 border-ink-950"
@@ -811,5 +847,31 @@ function Tag({ text, cls }: { text: string; cls: string }) {
     >
       {text}
     </motion.span>
+  );
+}
+
+const SECOND_BOARD_SCALE = 0.72;
+
+/** Run it twice: who won each run (shown once the pot is pushed). */
+function RunResults({ snapshot }: { snapshot: GameStateSnapshot }) {
+  const runs = ([1, 2] as const).map((run) => {
+    const ws = (snapshot.winnersAnnouncement ?? []).filter((w) => w.run === run);
+    const names = [...new Set(ws.map((w) => w.name))];
+    return { run, names, hand: ws[0]?.handName ?? null };
+  });
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {runs.map((r) => (
+        <span
+          key={r.run}
+          className={`px-3 py-0.5 rounded-full font-display font-extrabold text-[14px] whitespace-nowrap ${
+            r.run === 1 ? 'bg-gradient-to-r from-gold-dark via-gold to-gold-dark text-ink-950' : 'bg-sky-600 text-white'
+          }`}
+        >
+          Run {r.run}: {r.names.join(' & ')} {r.names.length > 1 ? 'split' : 'wins'}
+          {r.hand ? ` · ${r.hand}` : ''}
+        </span>
+      ))}
+    </div>
   );
 }

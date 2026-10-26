@@ -10,6 +10,8 @@ export interface ShowdownState {
   handId: string | null;
   /** How many community cards to show (run-out cards appear one at a time). */
   boardVisible: number;
+  /** Run it twice: how many cards of the second board to show (0 when there isn't one). */
+  secondBoardVisible: number;
   isRevealed: (playerId: string) => boolean;
   /** The winning hand is lit up. */
   highlight: boolean;
@@ -49,7 +51,7 @@ export function useShowdownSequence(s: GameStateSnapshot): ShowdownState {
   const timeline = useMemo(
     () => showdownTimeline({ runoutCards: runoutCardCount(s), revealCount: contenders, contested: contenders > 1, allIn: s.allInRunoutFrom !== null }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.handNumber, contenders, s.allInRunoutFrom, s.revealedRunoutFrom, s.communityCards.length]
+    [s.handNumber, contenders, s.allInRunoutFrom, s.revealedRunoutFrom, s.communityCards.length, s.secondBoard?.length]
   );
 
   const running = ended && start?.key === key;
@@ -101,6 +103,7 @@ export function useShowdownSequence(s: GameStateSnapshot): ShowdownState {
       ended: false,
       handId: null,
       boardVisible: s.communityCards.length,
+      secondBoardVisible: 0,
       isRevealed: () => true,
       highlight: false,
       awarded: false,
@@ -113,13 +116,17 @@ export function useShowdownSequence(s: GameStateSnapshot): ShowdownState {
   }
 
   const runoutFrom = s.allInRunoutFrom ?? s.revealedRunoutFrom;
-  const boardVisible =
-    runoutFrom === null ? s.communityCards.length : runoutFrom + timeline.boardCardAt.filter((t) => elapsed >= t).length;
+  const dealtSoFar = timeline.boardCardAt.filter((t) => elapsed >= t).length;
+  const boardVisible = runoutFrom === null ? s.communityCards.length : Math.min(s.communityCards.length, runoutFrom + dealtSoFar);
+  // Run it twice: the second board's own cards are dealt after the first board is complete.
+  const firstRunCards = runoutFrom === null ? 0 : s.communityCards.length - runoutFrom;
+  const secondBoardVisible = s.secondBoard && runoutFrom !== null ? runoutFrom + Math.max(0, dealtSoFar - firstRunCards) : 0;
 
   return {
     ended: true,
     handId: key,
     boardVisible,
+    secondBoardVisible,
     isRevealed: (id) => {
       const i = revealOrder.indexOf(id);
       return i >= 0 && elapsed >= timeline.revealAt[i];

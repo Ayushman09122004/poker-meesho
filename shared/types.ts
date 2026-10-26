@@ -72,6 +72,10 @@ export interface PublicPlayer {
   buyInTotal: number;
   /** Approved chips that will be added when the current hand finishes. */
   pendingChips: number;
+  /** Cards this player chose to show once the hand was over (null = still hidden). */
+  shownCards: (Card | null)[] | null;
+  /** You asked to show these cards (only sent to you). */
+  showRequested?: [boolean, boolean];
   /** Bounty mode: how many players this player has knocked out. */
   bounties: number;
   lastAction: PlayerAction | null;
@@ -128,6 +132,8 @@ export interface RoomSettings {
    * re-buys / top-ups are requests the host approves. Virtual chips only.
    */
   hostApproval: boolean;
+  /** Heads-up all-in before the river: deal the rest of the board twice, half the pot each. */
+  runItTwice: boolean;
 }
 
 /** 'coach' = assisted plus a live win-chance meter for your own hand. */
@@ -163,6 +169,13 @@ export interface SideBetView {
 }
 
 export type ThrowItem = 'tomato' | 'rose' | 'beer' | 'chicken';
+
+/** A meme someone cashed in, playing on everyone's screen. */
+export interface MemeEvent {
+  id: string;
+  playerId: string;
+  memeId: string;
+}
 
 export type ChipRequestKind = 'seat' | 'rebuy' | 'topup';
 
@@ -236,6 +249,10 @@ export interface GameStateSnapshot {
   botRebuyRequests?: string[];
   /** Host-approval rooms: open seat / re-buy / top-up requests. */
   chipRequests?: ChipRequest[];
+  /** Run it twice: the second board (all five cards) — null when the hand was run once. */
+  secondBoard?: Card[] | null;
+  /** Meme tickets earned on win streaks: player id → ticket tiers (1–4). */
+  memeTickets?: Record<string, number[]>;
   /** Tournament progress (null when not a tournament). */
   tournament: TournamentInfo | null;
   /** Bounty mode: knockouts that happened in the hand that just finished. */
@@ -252,6 +269,8 @@ export interface WinnerAnnouncement {
   amount: number;
   handName: HandRankName | null;
   potIndex: number;
+  /** Run it twice: which run (1 or 2) this share was won on. */
+  run?: 1 | 2;
 }
 
 export interface HandHistoryEntry {

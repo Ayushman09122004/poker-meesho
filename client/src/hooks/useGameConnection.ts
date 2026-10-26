@@ -12,6 +12,7 @@ import {
   JoinRoomResult,
   PlayerAction,
   RoomSettings,
+  MemeEvent,
   ThrowEvent,
   ThrowItem,
 } from '../../../shared/types';
@@ -40,6 +41,12 @@ export function useGameConnection() {
       useGameStore.getState().pushEmote(payload.playerId, payload.emoji);
     });
 
+    socket.on(ServerEvents.MemeBroadcast, (m: MemeEvent) => {
+      useGameStore.getState().pushMeme(m);
+    });
+    socket.on(ServerEvents.EntranceBroadcast, (e: { id: string; playerId: string; name: string; avatarSeed: string }) => {
+      useGameStore.getState().pushEntrance(e);
+    });
     socket.on(ServerEvents.ThrowBroadcast, (t: ThrowEvent) => {
       useGameStore.getState().pushThrow(t);
     });
@@ -148,6 +155,14 @@ export function requestChips(kind: 'seat' | 'rebuy' | 'topup', amount: number): 
 
 export function answerChipRequest(targetPlayerId: string, allow: boolean): void {
   socket.emit(ClientEvents.AnswerChipRequest, { targetPlayerId, allow });
+}
+
+export function showMyCards(which: 0 | 1 | 'both'): void {
+  socket.emit(ClientEvents.ShowCards, { which });
+}
+
+export function playMeme(memeId: string): void {
+  socket.emit(ClientEvents.PlayMeme, { memeId });
 }
 
 export function answerBotRebuy(targetPlayerId: string, allow: boolean): void {

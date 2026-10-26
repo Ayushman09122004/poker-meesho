@@ -1,6 +1,8 @@
 import { Server } from 'socket.io';
 import { ChatMessage, ChipRequestKind, RoomSettings, ThrowEvent, ThrowItem } from '../../../shared/types';
 import { buyInOptions } from '../../../shared/buyIn';
+import { MEMES, MEME_PLAY_MS, TIER_LABEL, ticketTierForStreak } from '../../../shared/memes';
+import { MemeEvent } from '../../../shared/types';
 import { ServerEvents } from '../../../shared/events';
 import { runoutCardCount, showdownTimeline } from '../../../shared/showdownTiming';
 import { PokerEngine } from './PokerEngine';
@@ -12,6 +14,8 @@ import { THROW_ITEMS, ThrowLimiter } from './Throwables';
 
 const NEXT_HAND_DELAY_MS = 4500;
 const CHAT_HISTORY_LIMIT = 100;
+/** After someone shows their cards between hands, keep the table up at least this long. */
+const SHOW_CARDS_MIN_MS = 3000;
 
 export class Room {
   code: string;
@@ -38,6 +42,12 @@ export class Room {
   private chipRequests = new Map<string, { kind: ChipRequestKind; amount: number }>();
   private throwLimiter = new ThrowLimiter();
   private lastBountyAnnounced = 0;
+  /** When the pending next-hand timer fires (ms epoch). */
+  private nextHandAt = 0;
+  /** Meme tickets earned on win streaks (tiers 1–4), and memes cashed in waiting to play. */
+  private memeTickets = new Map<string, number[]>();
+  private memeQueue: MemeEvent[] = [];
+  private lastTicketHand = 0;
   private destroyed = false;
   private handsSinceRemark = 0;
   lastActivityAt = Date.now();
@@ -123,6 +133,7 @@ export class Room {
       if (!socketId) continue;
       const snapshot = this.engine.getSnapshot(player.id);
       snapshot.botRebuyRequests = [...this.pendingBotRebuys];
+      snapshot.memeTickets = Object.fromEntries(this.memeTickets);
       snapshot.chipRequests = [...this.chipRequests].map(([playerId, r]) => ({ playerId, ...r }));
       snapshot.sideBet = this.sideBets.view(player.id, this.engine);
       snapshot.throwsLeft = this.throwLimiter.remaining(player.id);
@@ -333,6 +344,7 @@ export class Room {
       const later = this.engine.players.get(playerId)!.pendingChips > 0 ? ' (added after this hand)' : '';
       const verb = req.kind === 'seat' ? 'seated' : req.kind === 'rebuy' ? 'approved the re-buy for' : 'approved the top-up for';
       this.systemChat(`✅ The host ${verb} ${p.name} — ${req.amount.toLocaleString()} chips${later}.`);
+      if (req.kind === 'seat') this.announceEntrance(playerId);
     }
     this.afterEngineMutation();
     return null;
@@ -341,6 +353,84 @@ export class Room {
   forgetChipRequest(playerId?: string): void {
     if (playerId) this.chipRequests.delete(playerId);
     else for (const [id, r] of this.chipRequests) if (r.kind !== 'seat') this.chipRequests.delete(id);
+  }
+
+  // ---------- Show cards ----------
+
+  /**
+   * Show your cards. Asked mid-hand (e.g. after folding) it waits for the hand to end; asked
+   * between hands it shows straight away, and the next deal waits a moment so everyone sees it.
+   */
+  showCards(playerId: string, which: 0 | 1 | 'both'): void {
+    if (!this.engine.showCards(playerId, which)) return;
+    this.broadcastState();
+    if (this.engine.phase === 'between_hands' && this.nextHandTimer && this.nextHandAt - Date.now() < SHOW_CARDS_MIN_MS) {
+      this.scheduleNextHand(SHOW_CARDS_MIN_MS);
+    }
+  }
+
+  // ---------- Meme tickets ----------
+
+  /** Win streaks earn meme tickets (2 in a row → tier 1 … 5 → tier 4). Once per finished hand. */
+  private grantMemeTickets(): number {
+    const last = this.engine.handHistory[0];
+    if (!last || last.timestamp === this.lastTicketHand) return 0;
+    this.lastTicketHand = last.timestamp;
+    const winners = new Set((this.engine.lastWinners ?? []).map((w) => w.playerId));
+    let granted = 0;
+    for (const p of this.engine.players.values()) {
+      if (!winners.has(p.id)) continue;
+      const tier = ticketTierForStreak(p.stats.currentWinStreak);
+      if (!tier) continue;
+      this.memeTickets.set(p.id, [...(this.memeTickets.get(p.id) ?? []), tier]);
+      this.systemChat(`🎟️ ${p.name} won ${p.stats.currentWinStreak} in a row — earned a ${TIER_LABEL[tier]} meme ticket!`);
+      granted++;
+    }
+    return granted;
+  }
+
+  /**
+   * Cash in a ticket: the meme plays on everyone's screen before the next deal (or right away when
+   * no hand is coming up). Returns an error message if it can't be used.
+   */
+  playMeme(playerId: string, memeId: string): string | null {
+    const meme = MEMES.find((m) => m.id === memeId);
+    const p = this.engine.players.get(playerId);
+    if (!meme || !p) return 'Unknown meme.';
+    const tickets = this.memeTickets.get(playerId) ?? [];
+    // A ticket plays any meme of its tier or lower; spend the lowest one that works.
+    const usable = tickets.filter((x) => x >= meme.tier);
+    const i = usable.length ? tickets.indexOf(Math.min(...usable)) : -1;
+    if (i < 0) return `You need a ${TIER_LABEL[meme.tier]} ticket for that one.`;
+    tickets.splice(i, 1);
+    this.memeTickets.set(playerId, tickets);
+    this.memeQueue.push({ id: generateId(8), playerId, memeId });
+    const handComing = this.engine.phase === 'hand_in_progress' || (this.engine.phase === 'between_hands' && !!this.nextHandTimer);
+    this.systemChat(`🎉 ${p.name} cashed in a meme${handComing ? ' — it plays before the next hand!' : '!'}`);
+    if (!handComing) this.playNextMeme();
+    this.broadcastState();
+    return null;
+  }
+
+  private playNextMeme(): boolean {
+    const ev = this.memeQueue.shift();
+    if (!ev) return false;
+    for (const socketId of this.playerSocket.values()) {
+      if (socketId) this.io.to(socketId).emit(ServerEvents.MemeBroadcast, ev);
+    }
+    return true;
+  }
+
+  // ---------- Character entrances ----------
+
+  /** A player sat down: everyone sees their character make an entrance. */
+  announceEntrance(playerId: string): void {
+    const p = this.engine.players.get(playerId);
+    if (!p) return;
+    const ev = { id: generateId(8), playerId, name: p.name, avatarSeed: p.avatarSeed };
+    for (const socketId of this.playerSocket.values()) {
+      if (socketId) this.io.to(socketId).emit(ServerEvents.EntranceBroadcast, ev);
+    }
   }
 
   // ---------- Side bets & throwables ----------
@@ -390,6 +480,8 @@ export class Room {
 
   /** Fresh session after the host restarts: clear requests and side-bet scores. */
   onRestart(): void {
+    this.memeTickets.clear();
+    this.memeQueue = [];
     this.forgetBotRebuys();
     // Everyone is back to a fresh stack, so re-buys/top-ups are moot; seat requests still stand.
     this.forgetChipRequest();
@@ -407,18 +499,25 @@ export class Room {
     }
   }
 
-  private scheduleNextHand(): void {
+  private scheduleNextHand(delayMs = this.nextHandDelayMs()): void {
     if (this.nextHandTimer) clearTimeout(this.nextHandTimer);
+    this.nextHandAt = Date.now() + delayMs;
     this.nextHandTimer = setTimeout(() => {
+      this.nextHandTimer = null;
       // Asked only now, after the end-of-hand sequence has played, so the chat can't spoil the result.
       this.announceBounties();
-      if (this.askBotRebuys()) this.broadcastState();
+      if (this.grantMemeTickets() | (this.askBotRebuys() ? 1 : 0)) this.broadcastState();
+      // A meme someone cashed in plays before the next deal — the deal waits for it.
+      if (this.playNextMeme()) {
+        this.scheduleNextHand(MEME_PLAY_MS + 400);
+        return;
+      }
       if (this.engine.phase !== 'between_hands') return;
       if (!this.engine.canStartHand()) return;
       this.engine.startHand();
       this.systemChat(`Hand #${this.engine.handNumber} started.`);
       this.afterEngineMutation();
-    }, this.nextHandDelayMs());
+    }, delayMs);
   }
 
   /** Long enough for clients to play the whole end-of-hand sequence (see shared/showdownTiming). */

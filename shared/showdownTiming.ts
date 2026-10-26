@@ -67,7 +67,16 @@ export function showdownTimeline(opts: { runoutCards: number; revealCount: numbe
 }
 
 /** Number of board cards dealt in one go at the end of the hand (shown one by one). */
-export function runoutCardCount(snapshot: { communityCards: unknown[]; allInRunoutFrom: number | null; revealedRunoutFrom: number | null }): number {
+export function runoutCardCount(snapshot: {
+  communityCards: unknown[];
+  allInRunoutFrom: number | null;
+  revealedRunoutFrom: number | null;
+  secondBoard?: unknown[] | null;
+}): number {
   const from = snapshot.allInRunoutFrom ?? snapshot.revealedRunoutFrom;
-  return from === null ? 0 : Math.max(0, snapshot.communityCards.length - from);
+  if (from === null) return 0;
+  const first = Math.max(0, snapshot.communityCards.length - from);
+  // Run it twice: the second board's new cards are dealt one by one after the first board's.
+  const second = snapshot.secondBoard ? Math.max(0, snapshot.secondBoard.length - from) : 0;
+  return first + second;
 }

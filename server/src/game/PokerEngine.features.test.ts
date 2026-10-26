@@ -152,3 +152,112 @@ describe('Table themes', () => {
     expect(settings({ tableTheme: 'nope' as never }).tableTheme).toBe('midnight');
   });
 });
+
+describe('Run it twice', () => {
+  function headsUp(runItTwice: boolean, players = 2) {
+    const e = new PokerEngine('RIT01', settings({ runItTwice }));
+    const ids = ['a', 'b', 'c'].slice(0, players);
+    ids.forEach((id, i) => e.addPlayer(id, id.toUpperCase(), 'x' + i, i === 0));
+    e.startHand();
+    return e;
+  }
+  /** Everyone shoves (or calls a shove), then optionally waits until a street. */
+  function allIn(e: PokerEngine) {
+    let guard = 0;
+    while (e.phase === 'hand_in_progress' && e.currentTurnPlayerId && guard++ < 50) {
+      const l = e.getLegalActions(e.currentTurnPlayerId)!;
+      e.applyAction(e.currentTurnPlayerId, l.canAllIn ? 'all_in' : l.canCall ? 'call' : 'check');
+    }
+  }
+  const key = (c: { rank: string; suit: string }) => c.rank + c.suit;
+
+  it('a heads-up preflop all-in deals two complete, different boards and splits the pot', () => {
+    for (let n = 0; n < 20; n++) {
+      const e = headsUp(true);
+      allIn(e);
+      expect(e.secondBoard).toHaveLength(5);
+      const used = [...e.communityCards, ...e.secondBoard!, ...[...e.players.values()].flatMap((p) => p.holeCards)].map(key);
+      expect(new Set(used).size).toBe(used.length); // no card appears twice
+      const total = [...e.players.values()].reduce((s, p) => s + p.chips, 0);
+      expect(total).toBe(2000); // chips are conserved
+      const runs = new Set((e.getSnapshot().winnersAnnouncement ?? []).map((w) => w.run));
+      expect(runs.has(1) && runs.has(2)).toBe(true);
+    }
+  });
+
+  it('an all-in on the flop shares the flop between both boards', () => {
+    const e = headsUp(true);
+    // Call/check to the flop, then shove.
+    let guard = 0;
+    while (e.street === 'preflop' && e.currentTurnPlayerId && guard++ < 10) {
+      const l = e.getLegalActions(e.currentTurnPlayerId)!;
+      e.applyAction(e.currentTurnPlayerId, l.canCheck ? 'check' : 'call');
+    }
+    const flop = e.communityCards.slice(0, 3).map(key);
+    allIn(e);
+    expect(e.secondBoard!.slice(0, 3).map(key)).toEqual(flop);
+    expect(e.secondBoard!.slice(3).map(key)).not.toEqual(e.communityCards.slice(3).map(key));
+  });
+
+  it('is off unless the table turns it on, and never runs twice three-way', () => {
+    const off = headsUp(false);
+    allIn(off);
+    expect(off.secondBoard).toBeNull();
+    const threeWay = headsUp(true, 3);
+    allIn(threeWay);
+    expect(threeWay.secondBoard).toBeNull();
+  });
+
+  it('the next hand clears the second board', () => {
+    const e = headsUp(true);
+    allIn(e);
+    if (e.canStartHand()) {
+      e.startHand();
+      expect(e.secondBoard).toBeNull();
+    }
+  });
+});
+
+describe('Show cards', () => {
+  function threeHanded() {
+    const e = new PokerEngine('SHOW1', settings());
+    e.addPlayer('a', 'A', 'x', true);
+    e.addPlayer('b', 'B', 'y', false);
+    e.addPlayer('c', 'C', 'z', false);
+    e.startHand();
+    return e;
+  }
+
+  it('a folded player can ask to show, but nothing is revealed until the hand is over', () => {
+    const e = threeHanded();
+    const folder = e.currentTurnPlayerId!;
+    e.applyAction(folder, 'fold');
+    expect(e.showCards(folder, 'both')).toBe(true);
+    const other = [...e.players.keys()].find((id) => id !== folder)!;
+    expect(e.getSnapshot(other).players.find((p) => p.id === folder)!.shownCards).toBeNull();
+    expect(e.getSnapshot(folder).players.find((p) => p.id === folder)!.showRequested).toEqual([true, true]);
+    playPassively(e);
+    expect(e.phase).not.toBe('hand_in_progress');
+    expect(e.getSnapshot(other).players.find((p) => p.id === folder)!.shownCards).toEqual(e.players.get(folder)!.holeCards);
+  });
+
+  it('the winner of an uncontested pot can show just one card', () => {
+    const e = threeHanded();
+    e.applyAction(e.currentTurnPlayerId!, 'fold');
+    e.applyAction(e.currentTurnPlayerId!, 'fold');
+    const winner = [...e.players.values()].find((p) => p.status !== 'folded')!;
+    expect(e.showCards(winner.id, 1)).toBe(true);
+    const loser = [...e.players.values()].find((p) => p.id !== winner.id)!;
+    expect(e.getSnapshot(loser.id).players.find((p) => p.id === winner.id)!.shownCards).toEqual([null, winner.holeCards[1]]);
+    expect(e.showCards(winner.id, 1)).toBe(false);
+    e.startHand();
+    expect(e.getSnapshot(loser.id).players.every((p) => p.shownCards === null)).toBe(true);
+  });
+
+  it('someone who was not dealt in has nothing to show', () => {
+    const e = new PokerEngine('SHOW2', settings());
+    e.addPlayer('a', 'A', 'x', true);
+    e.addPlayer('b', 'B', 'y', false);
+    expect(e.showCards('a', 'both')).toBe(false);
+  });
+});

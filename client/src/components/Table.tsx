@@ -9,6 +9,7 @@ import { BettingBar } from './BettingBar';
 import { BotRebuyRequests } from './BotControls';
 import { AwaitingSeatCard, BuyInModal, HostChipRequests, LedgerModal, PendingRequestCard, myRequest } from './BuyIns';
 import { SideBetCard, TournamentPill, TournamentPodium } from './GameModesUI';
+import { MemeButton } from './FunExtras';
 import { setSittingOut } from '../hooks/useGameConnection';
 import { leaveRoom } from '../hooks/useGameConnection';
 import { sound } from '../lib/sound';
@@ -76,6 +77,7 @@ export function Table() {
             )}
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+            <MemeButton snapshot={snapshot} selfId={selfPlayerId} />
             {snapshot.settings.hostApproval && self && !self.awaitingSeat && !snapshot.settings.tournament && (
               <button
                 onClick={() => {

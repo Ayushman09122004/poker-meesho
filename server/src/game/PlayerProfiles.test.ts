@@ -69,7 +69,7 @@ describe('ProfileBook', () => {
 function settings(): RoomSettings {
   return {
     startingChips: 1000, smallBlind: 5, bigBlind: 10, blindIncreaseIntervalHands: 0, turnTimerSeconds: 30, maxPlayers: 9,
-    isPrivate: true, autoStartWhenReady: false, rebuyEnabled: false, tableTheme: 'midnight', gameMode: 'professional', tournament: false, blindLevelMinutes: 8, bounty: false, hostApproval: false,
+    isPrivate: true, autoStartWhenReady: false, rebuyEnabled: false, tableTheme: 'midnight', gameMode: 'professional', tournament: false, blindLevelMinutes: 8, bounty: false, hostApproval: false, runItTwice: false,
   };
 }
 

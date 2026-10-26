@@ -167,6 +167,15 @@ export function SettingsForm({ settings, onChange, compact }: SettingsFormProps)
           />
           Allow rebuys (virtual chips){settings.tournament ? ' — off in tournaments' : ''}
         </label>
+        <label className="flex items-center gap-2 text-sm text-slate-300" title="When two players are all-in before the river, deal the rest of the board twice — half the pot on each">
+          <input
+            type="checkbox"
+            className="accent-gold w-4 h-4"
+            checked={!!settings.runItTwice}
+            onChange={(e) => onChange({ runItTwice: e.target.checked })}
+          />
+          Run it twice (heads-up all-ins)
+        </label>
       </div>
 
       <div className="col-span-2 sm:col-span-3 grid sm:grid-cols-3 gap-2">
